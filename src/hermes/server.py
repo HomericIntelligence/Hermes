@@ -70,7 +70,7 @@ async def receive_webhook(request: Request) -> dict[str, str]:
 
     # HMAC validation (skipped when no secret is configured)
     if settings.webhook_secret:
-        _verify_signature(raw_body, request.headers.get("X-Maestro-Signature", ""))
+        _verify_signature(raw_body, request.headers.get("X-Webhook-Signature", ""))
 
     try:
         payload = WebhookPayload.model_validate_json(raw_body)

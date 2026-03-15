@@ -39,25 +39,25 @@ async def register_webhooks(
 
     endpoint = f"{maestro_url.rstrip('/')}/api/webhooks"
 
+    payload = {
+        "url": f"{hermes_url.rstrip('/')}/webhook",
+        "events": _SUBSCRIBED_EVENTS,
+        "secret": settings.webhook_secret,
+    }
+
     async with httpx.AsyncClient(timeout=10.0) as client:
-        for event in _SUBSCRIBED_EVENTS:
-            payload = {
-                "url": f"{hermes_url.rstrip('/')}/webhook",
-                "event": event,
-            }
-            try:
-                response = await client.post(endpoint, json=payload, headers=headers)
-                response.raise_for_status()
-                logger.info("Registered webhook for %s → %s", event, response.status_code)
-            except httpx.HTTPStatusError as exc:
-                logger.error(
-                    "Failed to register webhook for %s: HTTP %s — %s",
-                    event,
-                    exc.response.status_code,
-                    exc.response.text,
-                )
-            except httpx.RequestError as exc:
-                logger.error("Network error registering webhook for %s: %s", event, exc)
+        try:
+            response = await client.post(endpoint, json=payload, headers=headers)
+            response.raise_for_status()
+            logger.info("Registered webhook for events %s → %s", _SUBSCRIBED_EVENTS, response.status_code)
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "Failed to register webhooks: HTTP %s — %s",
+                exc.response.status_code,
+                exc.response.text,
+            )
+        except httpx.RequestError as exc:
+            logger.error("Network error registering webhooks: %s", exc)
 
 
 def main() -> None:

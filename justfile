@@ -27,7 +27,7 @@ health:
 
 # Register Hermes as a webhook receiver with ai-maestro
 register-webhook:
-    pixi run python -m hermes.registrar
+    bash scripts/register-webhooks.sh
 
 # === Testing ===
 
