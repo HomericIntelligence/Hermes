@@ -1,0 +1,33 @@
+[workspace]
+name = "project-hermes"
+version = "0.1.0"
+description = "Bridges ai-maestro webhooks to NATS JetStream for pub/sub fan-out and event replay"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.10"
+
+[pypi-dependencies]
+fastapi = "*"
+"uvicorn[standard]" = "*"
+nats-py = "*"
+pydantic = ">=2.0"
+pydantic-settings = "*"
+httpx = "*"
+python-dotenv = "*"
+
+[feature.dev.pypi-dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+httpx = "*"
+ruff = "*"
+mypy = "*"
+
+[environments]
+default = { features = ["dev"], solve-group = "default" }
+
+[tasks]
+start = "just start"
+test  = "just test"
+lint  = "just lint"
