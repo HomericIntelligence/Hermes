@@ -33,10 +33,25 @@ class Publisher:
     # ------------------------------------------------------------------
 
     async def connect(self, url: str) -> None:
-        """Connect to the NATS server and obtain a JetStream context."""
+        """Connect to the NATS server, obtain JetStream context, and ensure streams exist."""
         self._nc = await nats.connect(url)
         self._js = self._nc.jetstream()
+        await self._ensure_streams()
         logger.info("Connected to NATS at %s", url)
+
+    async def _ensure_streams(self) -> None:
+        """Create JetStream streams if they don't exist yet."""
+        from nats.js.api import StreamConfig
+        jsm = self._nc.jsm()
+        for name, subjects in (
+            ("homeric-agents", ["hi.agents.>"]),
+            ("homeric-tasks",  ["hi.tasks.>"]),
+        ):
+            try:
+                await jsm.find_stream(subjects[0])
+            except Exception:
+                await jsm.add_stream(StreamConfig(name=name, subjects=subjects))
+                logger.info("Created JetStream stream: %s (%s)", name, subjects)
 
     async def disconnect(self) -> None:
         """Drain and close the NATS connection."""
