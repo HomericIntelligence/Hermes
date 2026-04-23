@@ -227,7 +227,7 @@ async def receive_webhook(request: Request, settings: SettingsDep) -> WebhookAcc
     except Exception as exc:
         logger.warning("Invalid webhook payload: %s", exc)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid payload format",
         ) from exc
 
