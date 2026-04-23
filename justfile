@@ -57,6 +57,10 @@ lint:
 format:
     pixi run ruff format src tests
 
+# Run mypy type checker
+typecheck:
+    pixi run mypy --strict src/hermes/
+
 # === Docker ===
 
 # Build the Docker image

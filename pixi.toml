@@ -29,6 +29,7 @@ mypy = "*"
 default = { features = ["dev"], solve-group = "default" }
 
 [tasks]
-start = "just start"
-test  = "just test"
-lint  = "just lint"
+start     = "just start"
+test      = "just test"
+lint      = "just lint"
+typecheck = "just typecheck"
