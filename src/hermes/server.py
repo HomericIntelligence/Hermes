@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     publisher = Publisher()
     try:
-        await publisher.connect(settings.nats_url)
+        await publisher.connect(settings.nats_url, connect_timeout=settings.nats_connect_timeout)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Could not connect to NATS at %s: %s", settings.nats_url, exc)
 
@@ -95,7 +95,7 @@ async def receive_webhook(request: Request, settings: SettingsDep) -> dict[str, 
             detail="NATS publisher not connected",
         )
 
-    await publisher.publish(payload)
+    await publisher.publish(payload, publish_timeout=settings.nats_publish_timeout)
     return {"status": "accepted", "event": payload.event}
 
 

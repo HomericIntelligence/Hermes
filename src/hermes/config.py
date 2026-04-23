@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     nats_url: str = "nats://localhost:4222"
     hermes_port: int = 8080
     webhook_secret: str = ""
+    nats_connect_timeout: float = 5.0
+    nats_publish_timeout: float = 5.0
+    agamemnon_timeout: float = 10.0
 
 
 @lru_cache
