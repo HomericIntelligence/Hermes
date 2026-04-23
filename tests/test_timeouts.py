@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import sys
 import os
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,36 +11,42 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from hermes.config import Settings
-from hermes.publisher import Publisher
 from hermes.models import WebhookPayload
+from hermes.publisher import Publisher
 
 
 class TestTimeoutSettings:
     """Settings expose configurable timeouts with correct defaults."""
 
     def test_nats_connect_timeout_default(self) -> None:
+        """nats_connect_timeout defaults to 5.0 seconds."""
         s = Settings()
         assert s.nats_connect_timeout == 5.0
 
     def test_nats_publish_timeout_default(self) -> None:
+        """nats_publish_timeout defaults to 5.0 seconds."""
         s = Settings()
         assert s.nats_publish_timeout == 5.0
 
     def test_agamemnon_timeout_default(self) -> None:
+        """agamemnon_timeout defaults to 10.0 seconds."""
         s = Settings()
         assert s.agamemnon_timeout == 10.0
 
     def test_nats_connect_timeout_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """nats_connect_timeout can be overridden via environment variable."""
         monkeypatch.setenv("NATS_CONNECT_TIMEOUT", "15.0")
         s = Settings()
         assert s.nats_connect_timeout == 15.0
 
     def test_nats_publish_timeout_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """nats_publish_timeout can be overridden via environment variable."""
         monkeypatch.setenv("NATS_PUBLISH_TIMEOUT", "3.0")
         s = Settings()
         assert s.nats_publish_timeout == 3.0
 
     def test_agamemnon_timeout_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """agamemnon_timeout can be overridden via environment variable."""
         monkeypatch.setenv("AGAMEMNON_TIMEOUT", "20.0")
         s = Settings()
         assert s.agamemnon_timeout == 20.0
@@ -51,6 +57,7 @@ class TestPublisherConnectTimeout:
 
     @pytest.mark.asyncio
     async def test_connect_passes_timeout(self) -> None:
+        """connect_timeout kwarg is forwarded to nats.connect."""
         pub = Publisher()
         mock_nc = MagicMock()
         mock_nc.jetstream.return_value = MagicMock()
@@ -65,6 +72,7 @@ class TestPublisherConnectTimeout:
 
     @pytest.mark.asyncio
     async def test_connect_default_timeout(self) -> None:
+        """connect_timeout defaults to 5.0 when not specified."""
         pub = Publisher()
         mock_nc = MagicMock()
         mock_nc.jetstream.return_value = MagicMock()
@@ -82,6 +90,7 @@ class TestPublisherPublishTimeout:
     """Publisher.publish() passes timeout to JetStream publish."""
 
     def _make_payload(self) -> WebhookPayload:
+        """Return a minimal WebhookPayload for use in publish tests."""
         return WebhookPayload(
             event="agent.created",
             data={"host": "myhost", "name": "myagent"},
@@ -90,6 +99,7 @@ class TestPublisherPublishTimeout:
 
     @pytest.mark.asyncio
     async def test_publish_passes_timeout(self) -> None:
+        """publish_timeout kwarg is forwarded to JetStream publish."""
         pub = Publisher()
         mock_js = AsyncMock()
         pub._js = mock_js
@@ -101,6 +111,7 @@ class TestPublisherPublishTimeout:
 
     @pytest.mark.asyncio
     async def test_publish_default_timeout(self) -> None:
+        """publish_timeout defaults to 5.0 when not specified."""
         pub = Publisher()
         mock_js = AsyncMock()
         pub._js = mock_js
@@ -111,6 +122,7 @@ class TestPublisherPublishTimeout:
 
     @pytest.mark.asyncio
     async def test_publish_raises_when_not_connected(self) -> None:
+        """Publish raises RuntimeError when the publisher is not connected."""
         pub = Publisher()
         with pytest.raises(RuntimeError, match="not connected"):
             await pub.publish(self._make_payload())
