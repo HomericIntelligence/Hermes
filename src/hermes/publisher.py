@@ -44,6 +44,7 @@ class Publisher:
         """Create JetStream streams if they don't exist yet."""
         from nats.js.api import StreamConfig
         from nats.js.errors import NotFoundError
+        assert self._nc is not None
         jsm = self._nc.jsm()
         for name, subjects in (
             ("homeric-agents", ["hi.agents.>"]),
