@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     agamemnon_timeout: float = 10.0
     shutdown_timeout: float = 10.0
     enable_dead_letter: bool = True
+    log_json: bool = False
 
     @field_validator("webhook_secret")
     @classmethod
