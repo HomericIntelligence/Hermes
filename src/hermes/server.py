@@ -11,6 +11,7 @@ from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 
+from hermes import __version__
 from hermes.config import Settings, get_settings
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher
@@ -44,7 +45,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="ProjectHermes",
     description="Bridges external webhooks to NATS JetStream.",
-    version="0.1.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
