@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     enable_dead_letter: bool = True
     log_json: bool = False
     active_subjects_max: int = 1000
+    webhook_rate_limit: str = "60/minute"
+    webhook_rate_limit_key: str = "ip"
 
     @field_validator("hermes_public_url", mode="before")
     @classmethod
