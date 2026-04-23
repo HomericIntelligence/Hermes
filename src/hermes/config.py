@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_MIN_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -24,6 +27,15 @@ class Settings(BaseSettings):
     nats_publish_timeout: float = 5.0
     agamemnon_timeout: float = 10.0
     enable_dead_letter: bool = True
+
+    @field_validator("webhook_secret")
+    @classmethod
+    def _secret_min_length(cls, v: str) -> str:
+        if v and len(v) < _MIN_SECRET_LENGTH:
+            raise ValueError(
+                f"WEBHOOK_SECRET must be at least {_MIN_SECRET_LENGTH} characters when set"
+            )
+        return v
 
 
 @lru_cache
