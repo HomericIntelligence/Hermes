@@ -80,6 +80,12 @@ docker-up:
 docker-down:
     docker compose down
 
+# === Security ===
+
+# Scan repository for leaked secrets (requires gitleaks installed)
+scan-secrets:
+    gitleaks detect --source . --config .gitleaks.toml --verbose
+
 # === NATS ===
 
 # Start NATS server (uses Odysseus config if available, otherwise embedded defaults)
