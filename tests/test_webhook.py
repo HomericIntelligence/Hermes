@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import hmac as hmac_mod
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
