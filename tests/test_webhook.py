@@ -435,6 +435,101 @@ class TestPayloadSizeLimit:
         assert tc.post("/", content=b"x" * 11).status_code == 413
 
 
+class TestWildcardInjectionSanitization:
+    """Verify that wildcard characters in webhook payloads are sanitized before publish (#152)."""
+
+    def test_wildcard_in_host_field_is_sanitized_before_publish(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
+
+        published_subjects: list[str] = []
+
+        from hermes.publisher import Publisher
+        from hermes.server import app
+
+        real_publisher = Publisher()
+
+        async def _capture_publish(payload, publish_timeout=5.0, *, request_id=""):
+            subject = real_publisher._resolve_subject(payload)
+            if subject is not None:
+                published_subjects.append(subject)
+
+        mock_publisher = MagicMock(spec=Publisher)
+        mock_publisher.is_connected = True
+        mock_publisher.active_subjects = []
+        mock_publisher.publish = AsyncMock(side_effect=_capture_publish)
+
+        app.state.publisher = mock_publisher
+
+        payload = {
+            "event": "agent.created",
+            "data": {"host": "evil*host", "name": "bot"},
+            "timestamp": "2026-01-01T00:00:00Z",
+        }
+        body_bytes = json.dumps(payload).encode()
+        client = TestClient(app, raise_server_exceptions=True)
+        response = client.post(
+            "/webhook",
+            content=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "X-Webhook-Signature": _sign(body_bytes),
+            },
+        )
+
+        assert response.status_code == 202
+        assert len(published_subjects) == 1
+        assert "*" not in published_subjects[0]
+        assert ">" not in published_subjects[0]
+        assert "evil" in published_subjects[0]
+
+    def test_wildcard_in_name_field_is_sanitized_before_publish(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
+
+        published_subjects: list[str] = []
+
+        from hermes.publisher import Publisher
+        from hermes.server import app
+
+        real_publisher = Publisher()
+
+        async def _capture_publish(payload, publish_timeout=5.0, *, request_id=""):
+            subject = real_publisher._resolve_subject(payload)
+            if subject is not None:
+                published_subjects.append(subject)
+
+        mock_publisher = MagicMock(spec=Publisher)
+        mock_publisher.is_connected = True
+        mock_publisher.active_subjects = []
+        mock_publisher.publish = AsyncMock(side_effect=_capture_publish)
+
+        app.state.publisher = mock_publisher
+
+        payload = {
+            "event": "agent.created",
+            "data": {"host": "myhost", "name": "bad>bot"},
+            "timestamp": "2026-01-01T00:00:00Z",
+        }
+        body_bytes = json.dumps(payload).encode()
+        client = TestClient(app, raise_server_exceptions=True)
+        response = client.post(
+            "/webhook",
+            content=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "X-Webhook-Signature": _sign(body_bytes),
+            },
+        )
+
+        assert response.status_code == 202
+        assert len(published_subjects) == 1
+        assert "*" not in published_subjects[0]
+        assert ">" not in published_subjects[0]
+
+
 class TestSubjectsEndpoint:
     def test_subjects_returns_list(self) -> None:
         client = _build_client()
