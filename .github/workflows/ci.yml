@@ -67,4 +67,4 @@ jobs:
       - name: Integration tests
         env:
           TEST_NATS_URL: nats://localhost:4222
-        run: pixi run pytest -m integration -v
+        run: pixi run pytest -m integration -v --no-cov
