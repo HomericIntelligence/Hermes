@@ -119,7 +119,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("Shutdown: timed out waiting for in-flight requests; proceeding")
 
     logger.info("Shutdown: draining NATS connection")
-    await publisher.disconnect(drain_timeout=settings.shutdown_timeout)
+    await publisher.disconnect()
 
 
 # ---------------------------------------------------------------------------

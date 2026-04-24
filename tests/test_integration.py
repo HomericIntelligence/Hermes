@@ -271,7 +271,7 @@ class TestLifespan:
         assert not test_app.state.publisher.is_connected
 
     async def test_lifespan_handles_nats_unavailable(self) -> None:
-        """Lifespan does not raise even when NATS is unreachable — it logs a warning."""
+        """Lifespan raises when NATS is unreachable after all retry attempts."""
         from hermes.config import settings
         from hermes.server import lifespan
         from fastapi import FastAPI
@@ -279,9 +279,9 @@ class TestLifespan:
         settings.nats_url = "nats://127.0.0.1:19999"  # nothing listening here
         test_app = FastAPI()
 
-        # Should not raise
-        async with lifespan(test_app):
-            assert not test_app.state.publisher.is_connected
+        with pytest.raises(Exception):
+            async with lifespan(test_app):
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -291,9 +291,9 @@ class TestLifespan:
 
 class TestEdgeCases:
     async def test_unknown_event_type_not_published(
-        self, publisher: Publisher, nats_client: nats.aio.client.Client
+        self, nats_url: str, nats_client: nats.aio.client.Client
     ) -> None:
-        """Unknown event types are silently dropped — no NATS message, no error."""
+        """Unknown event types with dead-letter disabled are dropped — no NATS message."""
         received: list[nats.aio.msg.Msg] = []
 
         async def _cb(m: nats.aio.msg.Msg) -> None:
@@ -301,13 +301,18 @@ class TestEdgeCases:
 
         sub = await nats_client.subscribe("hi.>", cb=_cb)
 
-        payload = WebhookPayload(
-            event="unknown.event",
-            data={"foo": "bar"},
-            timestamp="2026-04-22T00:00:00Z",
-        )
-        await publisher.publish(payload)
-        await asyncio.sleep(0.1)
+        pub = Publisher(enable_dead_letter=False)
+        await pub.connect(nats_url)
+        try:
+            payload = WebhookPayload(
+                event="unknown.event",
+                data={"foo": "bar"},
+                timestamp="2026-04-22T00:00:00Z",
+            )
+            await pub.publish(payload)
+            await asyncio.sleep(0.1)
+        finally:
+            await pub.disconnect()
 
         await sub.unsubscribe()
         assert received == []
