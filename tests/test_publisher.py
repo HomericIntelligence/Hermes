@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from nats.js.errors import NotFoundError
 
-from hermes.publisher import Publisher, _slug
+from hermes.publisher import Publisher, UnknownEventTypeError, _slug
 
 
 def _make_publisher() -> Publisher:
@@ -236,3 +236,29 @@ class TestActiveSubjectsBound:
         for i in range(5):
             self._add_subject(pub, f"subj-{i}")
         assert len(pub.active_subjects) == 2
+
+
+class TestUnknownEventTypeError:
+    """Publisher raises UnknownEventTypeError for unknown events when dead-lettering is off."""
+
+    @pytest.mark.asyncio
+    async def test_unknown_event_raises_when_dead_letter_disabled(self) -> None:
+        from hermes.models import WebhookPayload
+
+        pub = Publisher(enable_dead_letter=False)
+        pub._js = AsyncMock()
+
+        payload = WebhookPayload(event="foo.unknown", data={}, timestamp="2026-01-01T00:00:00Z")
+        with pytest.raises(UnknownEventTypeError):
+            await pub.publish(payload)
+
+    @pytest.mark.asyncio
+    async def test_unknown_event_error_message_contains_event_type(self) -> None:
+        from hermes.models import WebhookPayload
+
+        pub = Publisher(enable_dead_letter=False)
+        pub._js = AsyncMock()
+
+        payload = WebhookPayload(event="foo.unknown", data={}, timestamp="2026-01-01T00:00:00Z")
+        with pytest.raises(UnknownEventTypeError, match="foo.unknown"):
+            await pub.publish(payload)
