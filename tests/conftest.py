@@ -9,6 +9,7 @@ import nats
 import pytest
 import pytest_asyncio
 
+from hermes.config import get_settings
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher
 
@@ -30,6 +31,14 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "integration: requires a running NATS server"
     )
+
+
+@pytest.fixture(autouse=True)
+def reset_settings() -> None:
+    """Clear the get_settings LRU cache before each test so mutations don't leak."""
+    get_settings.cache_clear()
+    yield  # type: ignore[misc]
+    get_settings.cache_clear()
 
 
 @pytest.fixture(scope="session")

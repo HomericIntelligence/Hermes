@@ -4,14 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import signal
-import sys
-import os
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 # ---------------------------------------------------------------------------
@@ -131,9 +127,7 @@ class TestShutdownMiddleware:
         srv._shutdown_event = asyncio.Event()
         srv._shutdown_event.set()
         try:
-            from hermes.config import settings
-
-            settings.webhook_secret = ""
+            # webhook_secret="" is the default; no env override needed
             client = _build_client()
             response = client.post(
                 "/webhook",
@@ -151,9 +145,7 @@ class TestShutdownMiddleware:
         import hermes.server as srv
 
         srv._shutdown_event = asyncio.Event()
-        from hermes.config import settings
-
-        settings.webhook_secret = ""
+        # webhook_secret="" is the default; no env override needed
         client = _build_client()
         response = client.post(
             "/webhook",
@@ -216,12 +208,13 @@ class TestSignalHandler:
 
 class TestLifespanShutdown:
     @pytest.mark.asyncio
-    async def test_shutdown_waits_for_inflight_requests(self) -> None:
+    async def test_shutdown_waits_for_inflight_requests(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Lifespan teardown waits until _inflight reaches 0 before disconnecting."""
         import hermes.server as srv
-        from hermes.config import settings
+        from hermes.config import Settings
 
-        settings.shutdown_timeout = 2.0
+        monkeypatch.setenv("SHUTDOWN_TIMEOUT", "2.0")
+        timeout = Settings().shutdown_timeout
 
         mock_pub = _make_mock_publisher()
 
@@ -246,7 +239,7 @@ class TestLifespanShutdown:
         mock_pub.disconnect = _tracked_disconnect
 
         # Run the post-yield shutdown logic directly
-        deadline = settings.shutdown_timeout
+        deadline = timeout
         poll_interval = 0.05
         elapsed = 0.0
         while elapsed < deadline:
@@ -264,12 +257,13 @@ class TestLifespanShutdown:
         assert disconnect_called_at_inflight == [0]
 
     @pytest.mark.asyncio
-    async def test_shutdown_proceeds_after_timeout(self) -> None:
+    async def test_shutdown_proceeds_after_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Lifespan teardown proceeds with disconnect even if inflight never clears."""
         import hermes.server as srv
-        from hermes.config import settings
+        from hermes.config import Settings
 
-        settings.shutdown_timeout = 0.3  # very short
+        monkeypatch.setenv("SHUTDOWN_TIMEOUT", "0.3")
+        timeout = Settings().shutdown_timeout
 
         srv._shutdown_event = asyncio.Event()
         srv._inflight = 5  # stuck requests
@@ -281,7 +275,7 @@ class TestLifespanShutdown:
             disconnect_called = True
 
         # Run the shutdown polling loop
-        deadline = settings.shutdown_timeout
+        deadline = timeout
         poll_interval = 0.05
         elapsed = 0.0
         while elapsed < deadline:
@@ -299,6 +293,5 @@ class TestLifespanShutdown:
         async with srv._inflight_lock:
             assert srv._inflight == 5
 
-        # Reset
+        # Reset inflight for subsequent tests
         srv._inflight = 0
-        settings.shutdown_timeout = 10.0

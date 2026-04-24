@@ -5,16 +5,12 @@ from __future__ import annotations
 import hashlib
 import hmac as hmac_mod
 import json
-import os
-import sys
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-_TEST_SECRET = "test-webhook-secret"
+_TEST_SECRET = "test-webhook-secret-padding-xxxxx"
 
 
 def _sign(body: bytes) -> str:
@@ -24,7 +20,6 @@ def _sign(body: bytes) -> str:
 def _build_client(dead_letters: list | None = None) -> TestClient:
     from hermes.server import app
     from hermes.publisher import Publisher
-    from hermes.config import settings
 
     mock_publisher = MagicMock(spec=Publisher)
     mock_publisher.is_connected = True
@@ -33,7 +28,6 @@ def _build_client(dead_letters: list | None = None) -> TestClient:
     mock_publisher.dead_letters = dead_letters if dead_letters is not None else []
 
     app.state.publisher = mock_publisher
-    settings.webhook_secret = _TEST_SECRET
     return TestClient(app, raise_server_exceptions=True)
 
 
@@ -81,7 +75,8 @@ class TestDeadLettersEndpoint:
 
 
 class TestWebhookMetricsInstrumentation:
-    def test_valid_webhook_increments_received_counter(self) -> None:
+    def test_valid_webhook_increments_received_counter(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         payload = {
             "event": "agent.created",
@@ -102,7 +97,8 @@ class TestWebhookMetricsInstrumentation:
         after = _get_counter_value("hermes_webhooks_received_total", {"event_type": "agent.created"})
         assert after == before + 1
 
-    def test_invalid_payload_increments_failed_counter(self) -> None:
+    def test_invalid_payload_increments_failed_counter(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         body_bytes = json.dumps({"bad": "payload"}).encode()
 
@@ -118,16 +114,15 @@ class TestWebhookMetricsInstrumentation:
         after = _get_counter_value("hermes_webhooks_failed_total", {"reason": "invalid_payload"})
         assert after == before + 1
 
-    def test_nats_unavailable_increments_failed_counter(self) -> None:
+    def test_nats_unavailable_increments_failed_counter(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         from hermes.server import app
         from hermes.publisher import Publisher
-        from hermes.config import settings
 
         mock_publisher = MagicMock(spec=Publisher)
         mock_publisher.is_connected = False
         mock_publisher.dead_letters = []
         app.state.publisher = mock_publisher
-        settings.webhook_secret = _TEST_SECRET
         client = TestClient(app, raise_server_exceptions=False)
 
         payload = {
