@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -121,7 +122,15 @@ class Publisher:
     # Publishing
     # ------------------------------------------------------------------
 
-    async def publish(self, payload: WebhookPayload, publish_timeout: float = 5.0, *, request_id: str = "") -> None:
+    async def publish(
+        self,
+        payload: WebhookPayload,
+        publish_timeout: float = 5.0,
+        *,
+        request_id: str = "",
+        publish_retries: int | None = None,
+        publish_retry_base_delay: float | None = None,
+    ) -> None:
         """Route a webhook payload to the appropriate NATS subject.
 
         Args:
@@ -129,9 +138,22 @@ class Publisher:
             publish_timeout: Timeout in seconds for the NATS publish call.
             request_id: Correlation ID from the originating HTTP request; included
                 in the NATS message to enable end-to-end tracing.
+            publish_retries: Max total attempts (default from Settings).
+            publish_retry_base_delay: Base delay in seconds for exponential backoff
+                (default from Settings). Actual delay = base * 2^attempt, capped at 2s.
         """
         if self._js is None:
             raise RuntimeError("Publisher is not connected to NATS")
+
+        from hermes.config import get_settings
+
+        settings = get_settings()
+        retries = publish_retries if publish_retries is not None else settings.publish_retries
+        base_delay = (
+            publish_retry_base_delay
+            if publish_retry_base_delay is not None
+            else settings.publish_retry_base_delay
+        )
 
         subject = self._resolve_subject(payload)
 
@@ -160,12 +182,33 @@ class Publisher:
                 logger.warning("No subject mapping for event type %r; dropping", payload.event)
             return
 
-        t0 = time.perf_counter()
-        await self._js.publish(subject, message, timeout=publish_timeout)
-        PUBLISH_LATENCY.observe(time.perf_counter() - t0)
-        WEBHOOKS_PUBLISHED.labels(subject_prefix=subject.split(".")[1]).inc()
-        self._track_subject(subject)
-        logger.info("Published to %s (request_id=%s)", subject, request_id)
+        _RETRYABLE = (nats.errors.TimeoutError, nats.errors.NoRespondersError)
+
+        last_exc: Exception | None = None
+        for attempt in range(retries):
+            try:
+                t0 = time.perf_counter()
+                await self._js.publish(subject, message, timeout=publish_timeout)
+                PUBLISH_LATENCY.observe(time.perf_counter() - t0)
+                WEBHOOKS_PUBLISHED.labels(subject_prefix=subject.split(".")[1]).inc()
+                self._track_subject(subject)
+                logger.info("Published to %s (request_id=%s)", subject, request_id)
+                return
+            except _RETRYABLE as exc:
+                last_exc = exc
+                if attempt < retries - 1:
+                    delay = min(base_delay * (2 ** attempt), 2.0)
+                    logger.warning(
+                        "Transient NATS error on attempt %d/%d for %s; retrying in %.3fs: %s",
+                        attempt + 1,
+                        retries,
+                        subject,
+                        delay,
+                        exc,
+                    )
+                    await asyncio.sleep(delay)
+
+        raise last_exc  # type: ignore[misc]
 
     def _track_subject(self, subject: str) -> None:
         """Add subject to the LRU OrderedDict, evicting the oldest if at capacity."""

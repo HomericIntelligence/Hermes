@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import nats.errors
 import pytest
 
 from nats.js.errors import NotFoundError
@@ -272,3 +273,59 @@ class TestActiveSubjectsBound:
         for i in range(5):
             self._add_subject(pub, f"subj-{i}")
         assert len(pub.active_subjects) == 2
+
+
+def _agent_payload() -> WebhookPayload:
+    return WebhookPayload(
+        event="agent.created",
+        data={"host": "myhost", "name": "myagent"},
+        timestamp="2026-04-24T00:00:00Z",
+    )
+
+
+def _make_connected_publisher() -> Publisher:
+    pub = Publisher()
+    pub._js = AsyncMock()
+    pub._connected = True
+    pub._nc = MagicMock()
+    return pub
+
+
+class TestPublishRetry:
+    """Retry logic for transient NATS publish failures."""
+
+    @pytest.mark.asyncio
+    async def test_succeeds_on_second_attempt_after_transient_failure(self) -> None:
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(
+            side_effect=[nats.errors.TimeoutError(), MagicMock()]
+        )
+
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
+
+        assert pub._js.publish.call_count == 2
+        mock_sleep.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_non_retryable_error_is_not_retried(self) -> None:
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(side_effect=ValueError("bad event"))
+
+        with pytest.raises(ValueError, match="bad event"):
+            with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
+
+        assert pub._js.publish.call_count == 1
+        mock_sleep.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_retry_count_is_respected(self) -> None:
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(side_effect=nats.errors.NoRespondersError())
+
+        with pytest.raises(nats.errors.NoRespondersError):
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
+
+        assert pub._js.publish.call_count == 3
