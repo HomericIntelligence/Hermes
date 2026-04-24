@@ -8,7 +8,7 @@ from functools import lru_cache
 from ipaddress import ip_address
 from typing import Optional
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MIN_SECRET_LENGTH = 32
@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     active_subjects_max: int = 1000
     webhook_rate_limit: str = "60/minute"
     webhook_rate_limit_key: str = "ip"
+    publish_retries: int = Field(default=3, ge=1)
+    publish_retry_base_delay: float = Field(default=0.1, gt=0)
 
     @field_validator("hermes_public_url", mode="before")
     @classmethod
