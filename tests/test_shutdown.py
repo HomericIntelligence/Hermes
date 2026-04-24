@@ -64,9 +64,9 @@ class TestShutdownTimeoutSetting:
 # ---------------------------------------------------------------------------
 
 
-class TestPublisherDisconnectDrainTimeout:
+class TestPublisherDisconnect:
     @pytest.mark.asyncio
-    async def test_disconnect_passes_no_timeout_by_default(self) -> None:
+    async def test_disconnect_drains_connection(self) -> None:
         from hermes.publisher import Publisher
 
         pub = Publisher()
@@ -79,26 +79,12 @@ class TestPublisherDisconnectDrainTimeout:
         mock_nc.drain.assert_awaited_once_with()
 
     @pytest.mark.asyncio
-    async def test_disconnect_passes_drain_timeout(self) -> None:
-        from hermes.publisher import Publisher
-
-        pub = Publisher()
-        mock_nc = AsyncMock()
-        mock_nc.is_closed = False
-        pub._nc = mock_nc
-
-        await pub.disconnect(drain_timeout=5.0)
-
-        mock_nc.drain.assert_awaited_once_with(timeout=5.0)
-
-    @pytest.mark.asyncio
     async def test_disconnect_skips_drain_when_not_connected(self) -> None:
         from hermes.publisher import Publisher
 
         pub = Publisher()
         # _nc is None — should be a no-op
         await pub.disconnect()
-        await pub.disconnect(drain_timeout=3.0)
 
 
 # ---------------------------------------------------------------------------
