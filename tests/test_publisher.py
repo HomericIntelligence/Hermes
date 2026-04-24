@@ -63,6 +63,28 @@ class TestAgentSubjectMapping:
         assert " " not in subject
         assert subject == "hi.agents.my-host.my-agent.created"
 
+    def test_host_id_field_used_as_host(self) -> None:
+        pub = _make_publisher()
+        payload = WebhookPayload(
+            event="agent.created",
+            data={"hostId": "myhost", "name": "bot"},
+            timestamp="2026-01-01T00:00:00Z",
+        )
+        subject = pub._resolve_subject(payload)
+        assert subject == "hi.agents.myhost.bot.created"
+
+    def test_host_id_with_wildcard_is_sanitized(self) -> None:
+        pub = _make_publisher()
+        payload = WebhookPayload(
+            event="agent.created",
+            data={"hostId": "bad*host", "name": "bot"},
+            timestamp="2026-01-01T00:00:00Z",
+        )
+        subject = pub._resolve_subject(payload)
+        assert subject is not None
+        assert "*" not in subject
+        assert ">" not in subject
+
 
 class TestTaskSubjectMapping:
     """Task event → NATS subject routing."""
