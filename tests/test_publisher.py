@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from nats.js.errors import NotFoundError
 
+from hermes.models import WebhookPayload
 from hermes.publisher import Publisher, _slug
 
 
@@ -195,6 +196,32 @@ class TestSlugSanitisation:
         )
         assert ">" not in subject
         assert subject == "hi.agents.myhost.all.created"
+
+    def test_all_wildcards_fall_back_to_unknown(self) -> None:
+        pub = _make_publisher()
+        payload = WebhookPayload(
+            event="agent.created",
+            data={"host": "***", "name": ">>>"},
+            timestamp="2026-04-23T00:00:00Z",
+        )
+        subject = pub._resolve_subject(payload)
+        assert subject is not None
+        parts = subject.split(".")
+        assert all(p for p in parts), f"Empty token in subject: {subject}"
+        assert "unknown" in subject
+
+    def test_all_wildcards_task_falls_back_to_unknown(self) -> None:
+        pub = _make_publisher()
+        payload = WebhookPayload(
+            event="task.updated",
+            data={"team_id": "***", "task_id": ">>>"},
+            timestamp="2026-04-23T00:00:00Z",
+        )
+        subject = pub._resolve_subject(payload)
+        assert subject is not None
+        parts = subject.split(".")
+        assert all(p for p in parts), f"Empty token in subject: {subject}"
+        assert "unknown" in subject
 
 
 class TestActiveSubjectsBound:
