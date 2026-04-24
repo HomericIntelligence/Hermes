@@ -38,6 +38,8 @@ def _rate_limit_client(
     mock_publisher = MagicMock(spec=Publisher)
     mock_publisher.is_connected = True
     mock_publisher.active_subjects = []
+    mock_publisher.active_subjects_max = 1000
+    mock_publisher.dead_letter_count = 0
     mock_publisher.publish = AsyncMock()
 
     app.state.publisher = mock_publisher
@@ -114,6 +116,7 @@ class TestRateLimitEnforcement:
 
 class TestNatsPublishTimeout:
     def test_slow_publish_returns_503(self) -> None:
+        import os
         from hermes.server import app
         from hermes.publisher import Publisher
         from hermes.config import get_settings
