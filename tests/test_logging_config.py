@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from hermes.logging_config import JsonFormatter, setup_logging
 

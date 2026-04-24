@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import sys
-import os
 from importlib.metadata import PackageNotFoundError
 from unittest.mock import patch
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 def test_hermes_version_is_a_string() -> None:

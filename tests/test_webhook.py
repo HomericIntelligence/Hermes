@@ -5,13 +5,10 @@ from __future__ import annotations
 import hashlib
 import hmac as hmac_mod
 import json
-import sys
-import os
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # Fixed secret used across all webhook tests
 _TEST_SECRET = "test-webhook-secret-padding-xxxxx"
@@ -22,36 +19,24 @@ def _sign(body: bytes) -> str:
     return hmac_mod.new(_TEST_SECRET.encode(), body, hashlib.sha256).hexdigest()
 
 
-def _build_client() -> TestClient:
-    """Build a TestClient with a mocked Publisher and a known webhook secret."""
-    from hermes.config import settings
+def _build_client(*, connected: bool = True) -> TestClient:
+    """Build a TestClient with a mocked Publisher."""
     from hermes.publisher import Publisher
     from hermes.server import app
 
     mock_publisher = MagicMock(spec=Publisher)
-    mock_publisher.is_connected = True
+    mock_publisher.is_connected = connected
     mock_publisher.active_subjects = []
     mock_publisher.publish = AsyncMock()
 
     # Inject the mock before the test client starts
     app.state.publisher = mock_publisher
-    # Set a known secret so tests can compute valid signatures
-    settings.webhook_secret = _TEST_SECRET
     return TestClient(app, raise_server_exceptions=True)
 
 
 def _build_client_disconnected() -> TestClient:
     """Build a TestClient where the Publisher reports NATS as disconnected."""
-    from hermes.server import app
-    from hermes.publisher import Publisher
-
-    mock_publisher = MagicMock(spec=Publisher)
-    mock_publisher.is_connected = False
-    mock_publisher.active_subjects = []
-    mock_publisher.publish = AsyncMock()
-
-    app.state.publisher = mock_publisher
-    return TestClient(app, raise_server_exceptions=True)
+    return _build_client(connected=False)
 
 
 class TestHealthEndpoint:
@@ -121,7 +106,8 @@ class TestReadyEndpoint:
 
 
 class TestWebhookEndpoint:
-    def test_valid_payload_returns_202(self) -> None:
+    def test_valid_payload_returns_202(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         payload = {
             "event": "agent.created",
@@ -139,7 +125,8 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 202
 
-    def test_webhook_invalid_payload_returns_422(self) -> None:
+    def test_webhook_invalid_payload_returns_422(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         body_bytes = json.dumps({"bad": "payload"}).encode()
         response = client.post(
@@ -152,7 +139,8 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 422
 
-    def test_webhook_missing_body_returns_422(self) -> None:
+    def test_webhook_missing_body_returns_422(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         body_bytes = b"not json"
         response = client.post(
@@ -165,7 +153,8 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 422
 
-    def test_webhook_returns_event_name(self) -> None:
+    def test_webhook_returns_event_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         payload = {
             "event": "task.updated",
@@ -184,7 +173,8 @@ class TestWebhookEndpoint:
         body = response.json()
         assert body["event"] == "task.updated"
 
-    def test_webhook_bad_signature_returns_401(self) -> None:
+    def test_webhook_bad_signature_returns_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         payload = {
             "event": "agent.created",

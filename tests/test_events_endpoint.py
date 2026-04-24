@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import sys
-import os
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 def _build_client() -> TestClient:

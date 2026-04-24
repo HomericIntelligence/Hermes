@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-import sys
-import os
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-# Ensure src is on the path when running directly
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from nats.js.errors import NotFoundError
 
