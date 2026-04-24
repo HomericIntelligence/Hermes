@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     log_json: bool = False
     active_subjects_max: int = 1000
 
+    @field_validator("hermes_public_url", mode="before")
+    @classmethod
+    def _validate_and_normalize_public_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        from urllib.parse import urlparse
+
+        parsed = urlparse(v)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"HERMES_PUBLIC_URL must be http or https, got: {v!r}")
+        return v.rstrip("/")
+
     @model_validator(mode="after")
     def _set_public_url_default(self) -> "Settings":
         if self.hermes_public_url is None:

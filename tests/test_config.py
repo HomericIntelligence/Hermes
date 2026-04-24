@@ -66,3 +66,26 @@ class TestHermesPublicUrl:
 
         s = Settings(hermes_port=9090, hermes_public_url="https://hermes.example.com", _env_file=None)
         assert s.hermes_public_url == "https://hermes.example.com"
+
+    def test_public_url_strips_trailing_slash(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HERMES_PUBLIC_URL", "http://example.com/")
+        from hermes.config import Settings
+
+        s = Settings()
+        assert not s.hermes_public_url.endswith("/")
+        assert s.hermes_public_url == "http://example.com"
+
+    def test_public_url_rejects_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HERMES_PUBLIC_URL", "not-a-url")
+        from hermes.config import Settings
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            Settings()
+
+    def test_public_url_accepts_with_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HERMES_PUBLIC_URL", "https://example.com/webhooks")
+        from hermes.config import Settings
+
+        s = Settings()
+        assert s.hermes_public_url == "https://example.com/webhooks"
