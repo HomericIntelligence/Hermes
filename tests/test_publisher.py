@@ -10,7 +10,7 @@ import pytest
 from nats.js.errors import NotFoundError
 
 from hermes.models import WebhookPayload
-from hermes.publisher import Publisher, UnknownEventTypeError, _slug
+from hermes.publisher import Publisher, UnknownEventTypeError, _RETRYABLE_PUBLISH_ERRORS, _slug
 
 
 def _make_publisher() -> Publisher:
@@ -390,3 +390,143 @@ class TestUnknownEventTypeError:
         payload = WebhookPayload(event="foo.unknown", data={}, timestamp="2026-01-01T00:00:00Z")
         with pytest.raises(UnknownEventTypeError, match="foo.unknown"):
             await pub.publish(payload)
+
+
+class TestRetryJitter:
+    """Jitter is applied to exponential backoff delays (issue #211)."""
+
+    @pytest.mark.asyncio
+    async def test_jitter_applied_to_sleep_delay(self) -> None:
+        """asyncio.sleep receives a value scaled by random.uniform(0.5, 1.5)."""
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(
+            side_effect=[nats.errors.TimeoutError(), MagicMock()]
+        )
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            patch("random.uniform", return_value=1.2) as mock_uniform,
+        ):
+            await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
+
+        mock_uniform.assert_called_once_with(0.5, 1.5)
+        # base_delay * 2^0 * jitter = 0.1 * 1 * 1.2 = 0.12
+        mock_sleep.assert_awaited_once_with(pytest.approx(0.12, rel=1e-3))
+
+    @pytest.mark.asyncio
+    async def test_jitter_lower_bound(self) -> None:
+        """Sleep delay is at least base_delay * 2^attempt * 0.5."""
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(
+            side_effect=[nats.errors.TimeoutError(), MagicMock()]
+        )
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            patch("random.uniform", return_value=0.5),
+        ):
+            await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
+
+        # 0.1 * 2^0 * 0.5 = 0.05
+        mock_sleep.assert_awaited_once_with(pytest.approx(0.05, rel=1e-3))
+
+    @pytest.mark.asyncio
+    async def test_jitter_upper_bound(self) -> None:
+        """Sleep delay is at most min(base_delay * 2^attempt, 2.0) * 1.5."""
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(
+            side_effect=[nats.errors.TimeoutError(), MagicMock()]
+        )
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            patch("random.uniform", return_value=1.5),
+        ):
+            await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
+
+        # 0.1 * 2^0 * 1.5 = 0.15
+        mock_sleep.assert_awaited_once_with(pytest.approx(0.15, rel=1e-3))
+
+    @pytest.mark.asyncio
+    async def test_delay_cap_applied_before_jitter(self) -> None:
+        """The 2.0-second cap is applied before multiplying by jitter."""
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(
+            side_effect=[nats.errors.TimeoutError(), nats.errors.TimeoutError(), MagicMock()]
+        )
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            patch("random.uniform", return_value=1.0),
+        ):
+            # base_delay=10.0 so base*2^1=20 → capped at 2.0; * 1.0 jitter = 2.0
+            await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=10.0)
+
+        sleep_calls = [call.args[0] for call in mock_sleep.await_args_list]
+        assert all(v <= 2.0 * 1.5 for v in sleep_calls), f"Unexpected large delay: {sleep_calls}"
+
+
+class TestRetryableExceptions:
+    """Only retryable exceptions are retried; non-retryable ones propagate immediately (issue #212)."""
+
+    def test_retryable_tuple_contains_timeout_error(self) -> None:
+        assert nats.errors.TimeoutError in _RETRYABLE_PUBLISH_ERRORS
+
+    def test_retryable_tuple_contains_no_responders_error(self) -> None:
+        assert nats.errors.NoRespondersError in _RETRYABLE_PUBLISH_ERRORS
+
+    def test_retryable_tuple_contains_drain_timeout_error(self) -> None:
+        assert nats.errors.DrainTimeoutError in _RETRYABLE_PUBLISH_ERRORS
+
+    @pytest.mark.asyncio
+    async def test_drain_timeout_error_is_retried(self) -> None:
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(
+            side_effect=[nats.errors.DrainTimeoutError(), MagicMock()]
+        )
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+
+        assert pub._js.publish.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_authorization_error_is_not_retried(self) -> None:
+        """AuthorizationError is not in _RETRYABLE_PUBLISH_ERRORS and must not be retried."""
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(side_effect=nats.errors.AuthorizationError())
+
+        with pytest.raises(nats.errors.AuthorizationError):
+            with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+
+        assert pub._js.publish.call_count == 1
+        mock_sleep.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_connection_closed_error_is_not_retried(self) -> None:
+        """ConnectionClosedError is not retryable and must propagate on first attempt."""
+        pub = _make_connected_publisher()
+        pub._js.publish = AsyncMock(side_effect=nats.errors.ConnectionClosedError())
+
+        with pytest.raises(nats.errors.ConnectionClosedError):
+            with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+
+        assert pub._js.publish.call_count == 1
+        mock_sleep.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_all_retryable_errors_exhaust_retry_budget(self) -> None:
+        """Each retryable error type exhausts the full retry budget."""
+        for error_cls in _RETRYABLE_PUBLISH_ERRORS:
+            pub = _make_connected_publisher()
+            pub._js.publish = AsyncMock(side_effect=error_cls())
+
+            with pytest.raises(error_cls):
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    await pub.publish(
+                        _agent_payload(), publish_retries=2, publish_retry_base_delay=0.01
+                    )
+
+            assert pub._js.publish.call_count == 2, f"Expected 2 attempts for {error_cls}"
