@@ -127,7 +127,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     for sig in (signal.SIGTERM, signal.SIGINT):
         try:
             loop.add_signal_handler(sig, _on_shutdown_signal, sig)
-        except ValueError:
+        except (ValueError, RuntimeError):
+            # ValueError: not in main thread; RuntimeError: Python 3.14+ wraps it
             pass
 
     _shutdown_event = asyncio.Event()
