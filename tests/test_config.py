@@ -117,7 +117,9 @@ class TestHermesPublicUrl:
     def test_public_url_explicit_override_ignores_port(self) -> None:
         from hermes.config import Settings
 
-        s = Settings(hermes_port=9090, hermes_public_url="https://hermes.example.com", _env_file=None)
+        s = Settings(
+            hermes_port=9090, hermes_public_url="https://hermes.example.com", _env_file=None
+        )
         assert s.hermes_public_url == "https://hermes.example.com"
 
     def test_public_url_strips_trailing_slash(self, monkeypatch: pytest.MonkeyPatch) -> None:

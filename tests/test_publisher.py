@@ -332,9 +332,7 @@ class TestPublishRetry:
     @pytest.mark.asyncio
     async def test_succeeds_on_second_attempt_after_transient_failure(self) -> None:
         pub = _make_connected_publisher()
-        pub._js.publish = AsyncMock(
-            side_effect=[nats.errors.TimeoutError(), MagicMock()]
-        )
+        pub._js.publish = AsyncMock(side_effect=[nats.errors.TimeoutError(), MagicMock()])
 
         with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.1)
@@ -399,9 +397,7 @@ class TestRetryJitter:
     async def test_jitter_applied_to_sleep_delay(self) -> None:
         """asyncio.sleep receives a value scaled by random.uniform(0.5, 1.5)."""
         pub = _make_connected_publisher()
-        pub._js.publish = AsyncMock(
-            side_effect=[nats.errors.TimeoutError(), MagicMock()]
-        )
+        pub._js.publish = AsyncMock(side_effect=[nats.errors.TimeoutError(), MagicMock()])
 
         with (
             patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
@@ -417,9 +413,7 @@ class TestRetryJitter:
     async def test_jitter_lower_bound(self) -> None:
         """Sleep delay is at least base_delay * 2^attempt * 0.5."""
         pub = _make_connected_publisher()
-        pub._js.publish = AsyncMock(
-            side_effect=[nats.errors.TimeoutError(), MagicMock()]
-        )
+        pub._js.publish = AsyncMock(side_effect=[nats.errors.TimeoutError(), MagicMock()])
 
         with (
             patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
@@ -434,9 +428,7 @@ class TestRetryJitter:
     async def test_jitter_upper_bound(self) -> None:
         """Sleep delay is at most min(base_delay * 2^attempt, 2.0) * 1.5."""
         pub = _make_connected_publisher()
-        pub._js.publish = AsyncMock(
-            side_effect=[nats.errors.TimeoutError(), MagicMock()]
-        )
+        pub._js.publish = AsyncMock(side_effect=[nats.errors.TimeoutError(), MagicMock()])
 
         with (
             patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
@@ -489,9 +481,7 @@ class TestRetryableExceptions:
     @pytest.mark.asyncio
     async def test_drain_timeout_error_is_retried(self) -> None:
         pub = _make_connected_publisher()
-        pub._js.publish = AsyncMock(
-            side_effect=[nats.errors.DrainTimeoutError(), MagicMock()]
-        )
+        pub._js.publish = AsyncMock(side_effect=[nats.errors.DrainTimeoutError(), MagicMock()])
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
@@ -506,7 +496,9 @@ class TestRetryableExceptions:
 
         with pytest.raises(nats.errors.AuthorizationError):
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+                await pub.publish(
+                    _agent_payload(), publish_retries=3, publish_retry_base_delay=0.01
+                )
 
         assert pub._js.publish.call_count == 1
         mock_sleep.assert_not_awaited()
@@ -519,7 +511,9 @@ class TestRetryableExceptions:
 
         with pytest.raises(nats.errors.ConnectionClosedError):
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+                await pub.publish(
+                    _agent_payload(), publish_retries=3, publish_retry_base_delay=0.01
+                )
 
         assert pub._js.publish.call_count == 1
         mock_sleep.assert_not_awaited()
@@ -563,9 +557,7 @@ class TestReconnectRace:
     @pytest.mark.asyncio
     async def test_stale_connection_error_is_retried(self) -> None:
         pub = _make_connected_publisher()
-        pub._js.publish = AsyncMock(
-            side_effect=[nats.errors.StaleConnectionError(), MagicMock()]
-        )
+        pub._js.publish = AsyncMock(side_effect=[nats.errors.StaleConnectionError(), MagicMock()])
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
@@ -579,7 +571,9 @@ class TestReconnectRace:
 
         with pytest.raises(nats.errors.ConnectionReconnectingError):
             with patch("asyncio.sleep", new_callable=AsyncMock):
-                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+                await pub.publish(
+                    _agent_payload(), publish_retries=3, publish_retry_base_delay=0.01
+                )
 
         assert pub._js.publish.call_count == 3
 
@@ -591,7 +585,9 @@ class TestReconnectRace:
 
         with pytest.raises(nats.errors.ConnectionClosedError):
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await pub.publish(_agent_payload(), publish_retries=3, publish_retry_base_delay=0.01)
+                await pub.publish(
+                    _agent_payload(), publish_retries=3, publish_retry_base_delay=0.01
+                )
 
         assert pub._js.publish.call_count == 1
         mock_sleep.assert_not_awaited()

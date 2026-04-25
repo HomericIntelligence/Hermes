@@ -86,9 +86,7 @@ class Settings(BaseSettings):
     @classmethod
     def _validate_rate_limit(cls, v: str) -> str:
         if not re.match(r"^\d+\s*/\s*(second|minute|hour|day)$", v):
-            raise ValueError(
-                f"WEBHOOK_RATE_LIMIT must be like '100/minute', got: {v!r}"
-            )
+            raise ValueError(f"WEBHOOK_RATE_LIMIT must be like '100/minute', got: {v!r}")
         return v
 
     @field_validator("webhook_secret")

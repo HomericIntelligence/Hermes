@@ -63,9 +63,7 @@ class TestRequestIdInLogContext:
                 },
             )
 
-        records_with_id = [
-            r for r in caplog.records if getattr(r, "request_id", None) == fixed_id
-        ]
+        records_with_id = [r for r in caplog.records if getattr(r, "request_id", None) == fixed_id]
         assert records_with_id, (
             f"Expected at least one log record with request_id={fixed_id!r}; "
             f"got records: {[vars(r) for r in caplog.records]}"
@@ -95,9 +93,7 @@ class TestRequestIdInLogContext:
                 },
             )
 
-        records_with_id = [
-            r for r in caplog.records if getattr(r, "request_id", None) == fixed_id
-        ]
+        records_with_id = [r for r in caplog.records if getattr(r, "request_id", None) == fixed_id]
         assert records_with_id, (
             f"Expected at least one log record with request_id={fixed_id!r}; "
             f"got records: {[vars(r) for r in caplog.records]}"
@@ -140,12 +136,8 @@ class TestRequestIdInLogContext:
                 },
             )
 
-        records_with_id = [
-            r for r in caplog.records if getattr(r, "request_id", None) == fixed_id
-        ]
-        assert records_with_id, (
-            f"Expected at least one log record with request_id={fixed_id!r}"
-        )
+        records_with_id = [r for r in caplog.records if getattr(r, "request_id", None) == fixed_id]
+        assert records_with_id, f"Expected at least one log record with request_id={fixed_id!r}"
 
 
 # ---------------------------------------------------------------------------

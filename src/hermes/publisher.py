@@ -60,7 +60,9 @@ class Publisher:
 
         self._nc: NATSClient | None = None
         self._js: JetStreamContext | None = None
-        self._max_subjects: int = max_subjects if max_subjects is not None else get_settings().active_subjects_max
+        self._max_subjects: int = (
+            max_subjects if max_subjects is not None else get_settings().active_subjects_max
+        )
         self._active_subjects: OrderedDict[str, None] = OrderedDict()
         self._stream_names: list[str] = []
         self._dead_letters: deque[dict[str, Any]] = deque(maxlen=1000)
@@ -75,6 +77,7 @@ class Publisher:
 
     async def connect(self, url: str, connect_timeout: float = 5.0) -> None:
         """Connect to the NATS server, obtain JetStream context, and ensure streams exist."""
+
         async def _on_disconnected() -> None:
             self._connected = False
             self.last_error = "NATS disconnected"
@@ -101,12 +104,13 @@ class Publisher:
         """Create JetStream streams if they don't exist yet."""
         from nats.js.api import StreamConfig
         from nats.js.errors import NotFoundError
+
         assert self._nc is not None
         jsm = self._nc.jsm()
         for name, subjects in (
-            ("homeric-agents",      ["hi.agents.>"]),
-            ("homeric-tasks",       ["hi.tasks.>"]),
-            ("homeric-deadletter",  ["hi.deadletter.>"]),
+            ("homeric-agents", ["hi.agents.>"]),
+            ("homeric-tasks", ["hi.tasks.>"]),
+            ("homeric-deadletter", ["hi.deadletter.>"]),
         ):
             try:
                 await jsm.stream_info(name)
@@ -233,7 +237,7 @@ class Publisher:
             except _RETRYABLE_PUBLISH_ERRORS as exc:
                 last_exc = exc
                 if attempt < retries - 1:
-                    delay = min(base_delay * (2 ** attempt), 2.0) * random.uniform(0.5, 1.5)
+                    delay = min(base_delay * (2**attempt), 2.0) * random.uniform(0.5, 1.5)
                     logger.warning(
                         "Transient NATS error on attempt %d/%d for %s; retrying in %.3fs: %s",
                         attempt + 1,
@@ -253,7 +257,9 @@ class Publisher:
         else:
             if len(self._active_subjects) >= self._max_subjects:
                 evicted, _ = self._active_subjects.popitem(last=False)
-                logger.warning("active_subjects LRU cap (%d) reached; evicted %s", self._max_subjects, evicted)
+                logger.warning(
+                    "active_subjects LRU cap (%d) reached; evicted %s", self._max_subjects, evicted
+                )
             self._active_subjects[subject] = None
         ACTIVE_SUBJECTS.set(len(self._active_subjects))
 
@@ -278,9 +284,13 @@ class Publisher:
         raw_host = data.get("hostId") or data.get("host")
         raw_name = data.get("name")
         if not raw_host:
-            logger.warning("agent event missing 'host' field; using 'unknown'", extra={"event": event})
+            logger.warning(
+                "agent event missing 'host' field; using 'unknown'", extra={"event": event}
+            )
         if not raw_name:
-            logger.warning("agent event missing 'name' field; using 'unknown'", extra={"event": event})
+            logger.warning(
+                "agent event missing 'name' field; using 'unknown'", extra={"event": event}
+            )
         host = _slug(raw_host or "unknown") or "unknown"
         name = _slug(raw_name or "unknown") or "unknown"
         # Strip the "agent." prefix to get the bare verb (created/updated/deleted)
@@ -292,9 +302,13 @@ class Publisher:
         raw_team_id = data.get("teamId") or data.get("team_id")
         raw_task_id = data.get("id") or data.get("task_id")
         if not raw_team_id:
-            logger.warning("task event missing 'team_id' field; using 'unknown'", extra={"event": event})
+            logger.warning(
+                "task event missing 'team_id' field; using 'unknown'", extra={"event": event}
+            )
         if not raw_task_id:
-            logger.warning("task event missing 'task_id' field; using 'unknown'", extra={"event": event})
+            logger.warning(
+                "task event missing 'task_id' field; using 'unknown'", extra={"event": event}
+            )
         team_id = _slug(raw_team_id or "unknown") or "unknown"
         task_id = _slug(raw_task_id or "unknown") or "unknown"
         verb = event.split(".", 1)[-1] if "." in event else event
@@ -304,6 +318,7 @@ class Publisher:
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
+
 
 def _slug(value: str) -> str:
     """Sanitise a token for use in a NATS subject (replace spaces/dots/wildcards).

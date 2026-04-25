@@ -47,7 +47,9 @@ class TestLogStartupBanner:
 
         mock = MagicMock(spec=Publisher)
         mock.is_connected = is_connected
-        mock.stream_names = stream_names if stream_names is not None else ["homeric-agents", "homeric-tasks"]
+        mock.stream_names = (
+            stream_names if stream_names is not None else ["homeric-agents", "homeric-tasks"]
+        )
         return mock
 
     def test_banner_logs_version(self) -> None:

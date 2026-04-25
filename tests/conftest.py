@@ -39,9 +39,7 @@ async def _nats_reachable() -> bool:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    config.addinivalue_line(
-        "markers", "integration: requires a running NATS server"
-    )
+    config.addinivalue_line("markers", "integration: requires a running NATS server")
 
 
 @pytest.fixture(autouse=True)
