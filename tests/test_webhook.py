@@ -215,9 +215,7 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 202
 
-    def test_webhook_invalid_payload_returns_422(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_webhook_invalid_payload_returns_422(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         body_bytes = json.dumps({"bad": "payload"}).encode()
@@ -231,9 +229,7 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 422
 
-    def test_webhook_missing_body_returns_422(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_webhook_missing_body_returns_422(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         body_bytes = b"not json"
@@ -267,9 +263,7 @@ class TestWebhookEndpoint:
         body = response.json()
         assert body["event"] == "task.updated"
 
-    def test_webhook_bad_signature_returns_401(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_webhook_bad_signature_returns_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         payload = {
@@ -296,9 +290,7 @@ class TestWebhookEndpoint:
         monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
         client = _build_client()
         labels = {"reason": "invalid_signature"}
-        before = (
-            REGISTRY.get_sample_value("hermes_webhooks_failed_total", labels) or 0.0
-        )
+        before = REGISTRY.get_sample_value("hermes_webhooks_failed_total", labels) or 0.0
         payload = {
             "event": "agent.created",
             "data": {"host": "localhost", "name": "bot"},
@@ -328,6 +320,7 @@ class TestWebhookEndpoint:
         app.state.publisher = mock_publisher
 
         from hermes.config import get_settings
+
         get_settings().webhook_secret = _TEST_SECRET
 
         client = TestClient(app, raise_server_exceptions=False)
@@ -1015,14 +1008,18 @@ class TestUnknownEventType:
         client = self._build_client_with_unknown_event("foo.bar")
         payload = {"event": "foo.bar", "data": {}, "timestamp": "2026-01-01T00:00:00Z"}
         body_bytes = json.dumps(payload).encode()
-        response = client.post("/webhook", content=body_bytes, headers={"Content-Type": "application/json"})
+        response = client.post(
+            "/webhook", content=body_bytes, headers={"Content-Type": "application/json"}
+        )
         assert response.status_code == 422
 
     def test_unknown_event_type_422_detail_contains_event(self) -> None:
         client = self._build_client_with_unknown_event("foo.bar")
         payload = {"event": "foo.bar", "data": {}, "timestamp": "2026-01-01T00:00:00Z"}
         body_bytes = json.dumps(payload).encode()
-        response = client.post("/webhook", content=body_bytes, headers={"Content-Type": "application/json"})
+        response = client.post(
+            "/webhook", content=body_bytes, headers={"Content-Type": "application/json"}
+        )
         body = response.json()
         assert "foo.bar" in body["detail"]
 
@@ -1083,9 +1080,7 @@ class TestMissingFieldWarnings:
 class TestPublisherRaises:
     """Issue #122 — publisher.publish() raising must return 500, not propagate."""
 
-    def test_publish_runtime_error_returns_500(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_publish_runtime_error_returns_500(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When publisher.publish raises RuntimeError the endpoint returns 500."""
         from hermes.publisher import Publisher
         from hermes.server import app
@@ -1167,7 +1162,5 @@ class TestExceptionDetailNotLeaked:
             )
 
         assert response.status_code == 422
-        warning_records = [
-            r for r in caplog.records if r.levelno >= logging.WARNING
-        ]
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert len(warning_records) >= 1

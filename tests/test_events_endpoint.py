@@ -57,8 +57,14 @@ class TestEventsEndpoint:
     def test_all_events_is_union(self) -> None:
         client = _build_client()
         body = client.get("/events").json()
-        expected = {"agent.created", "agent.updated", "agent.deleted",
-                    "task.updated", "task.completed", "task.failed"}
+        expected = {
+            "agent.created",
+            "agent.updated",
+            "agent.deleted",
+            "task.updated",
+            "task.completed",
+            "task.failed",
+        }
         assert set(body["all_events"]) == expected
 
     def test_all_events_count(self) -> None:

@@ -69,6 +69,7 @@ class TestJsonFormatter:
         parsed = json.loads(formatter.format(record))
         # Should parse without error and contain timezone info
         from datetime import datetime
+
         dt = datetime.fromisoformat(parsed["timestamp"])
         assert dt.tzinfo is not None
 
@@ -128,7 +129,8 @@ class TestSetupLogging:
         setup_logging(json_format=True)
         root = logging.getLogger()
         stream_handlers = [
-            h for h in root.handlers
+            h
+            for h in root.handlers
             if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
         ]
         assert any(isinstance(h.formatter, JsonFormatter) for h in stream_handlers)
@@ -138,7 +140,8 @@ class TestSetupLogging:
         setup_logging(json_format=False)
         root = logging.getLogger()
         stream_handlers = [
-            h for h in root.handlers
+            h
+            for h in root.handlers
             if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
         ]
         assert not any(isinstance(h.formatter, JsonFormatter) for h in stream_handlers)
@@ -150,7 +153,8 @@ class TestSetupLogging:
         setup_logging(json_format=True)
         root = logging.getLogger()
         stream_handlers = [
-            h for h in root.handlers
+            h
+            for h in root.handlers
             if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
         ]
         assert len(stream_handlers) == 1

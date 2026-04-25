@@ -65,29 +65,16 @@ def _on_shutdown_signal(sig: signal.Signals) -> None:
     _shutdown_event.set()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Connect to NATS on startup with retries; continue degraded if all attempts fail.
-
-    If NATS is unreachable after all retry attempts the app still starts so that
-    /health can return 503 and load-balancers can observe the degraded state.
-    The publisher remains disconnected; /webhook will return 503 until NATS recovers.
-    """
-    global _shutdown_event, _inflight
-
-    settings = get_settings()
-    publisher = Publisher(enable_dead_letter=settings.enable_dead_letter)
+async def _connect_with_retries(publisher: Publisher, settings: "Settings") -> Exception | None:
+    """Attempt NATS connection with retries; return the last exception or None on success."""
     last_exc: Exception | None = None
     for attempt in range(1, settings.nats_retry_attempts + 1):
         try:
             await asyncio.wait_for(
-                publisher.connect(
-                    settings.nats_url, connect_timeout=settings.nats_connect_timeout
-                ),
+                publisher.connect(settings.nats_url, connect_timeout=settings.nats_connect_timeout),
                 timeout=_NATS_CONNECT_TIMEOUT,
             )
-            last_exc = None
-            break
+            return None
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
             will_retry = attempt < settings.nats_retry_attempts
@@ -109,6 +96,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     type(exc).__name__,
                     exc,
                 )
+    return last_exc
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Connect to NATS on startup with retries; continue degraded if all attempts fail.
+
+    If NATS is unreachable after all retry attempts the app still starts so that
+    /health can return 503 and load-balancers can observe the degraded state.
+    The publisher remains disconnected; /webhook will return 503 until NATS recovers.
+    """
+    global _shutdown_event, _inflight
+
+    settings = get_settings()
+    publisher = Publisher(enable_dead_letter=settings.enable_dead_letter)
+    last_exc = await _connect_with_retries(publisher, settings)
 
     if last_exc is not None:
         logger.critical(
@@ -193,6 +196,7 @@ async def _http_exception_handler_with_request_id(
         headers=dict(response.headers),
     )
 
+
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
@@ -242,9 +246,7 @@ class ShutdownMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(ShutdownMiddleware)
 app.add_middleware(RequestIDMiddleware)
-app.add_middleware(
-    PayloadSizeLimitMiddleware, max_bytes=get_settings().max_payload_bytes
-)
+app.add_middleware(PayloadSizeLimitMiddleware, max_bytes=get_settings().max_payload_bytes)
 app.add_middleware(SlowAPIMiddleware)
 
 
@@ -316,25 +318,19 @@ async def ready(response: Response) -> dict[str, object]:
     },
 )
 @limiter.limit(lambda: get_settings().webhook_rate_limit)
-async def receive_webhook(
-    request: Request, settings: SettingsDep
-) -> WebhookAcceptedResponse:
+async def receive_webhook(request: Request, settings: SettingsDep) -> WebhookAcceptedResponse:
     """Receive an external webhook, validate its signature, and publish to NATS."""
     raw_body = await request.body()
     request_id: str = request.state.request_id
 
     # HMAC validation (skipped when no secret is configured)
     if settings.webhook_secret:
-        _verify_signature(
-            raw_body, request.headers.get("X-Webhook-Signature", ""), settings
-        )
+        _verify_signature(raw_body, request.headers.get("X-Webhook-Signature", ""), settings)
 
     try:
         payload = WebhookPayload.model_validate_json(raw_body)
     except Exception as exc:
-        logger.warning(
-            "Invalid webhook payload: %s", exc, extra={"request_id": request_id}
-        )
+        logger.warning("Invalid webhook payload: %s", exc, extra={"request_id": request_id})
         WEBHOOKS_FAILED.labels(reason="invalid_payload").inc()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

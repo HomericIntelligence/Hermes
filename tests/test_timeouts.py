@@ -48,7 +48,6 @@ class TestTimeoutSettings:
         s = Settings()
         assert s.agamemnon_timeout == 20.0
 
-
     def test_nats_retry_attempts_default(self) -> None:
         """nats_retry_attempts defaults to 3."""
         s = Settings()
@@ -74,12 +73,14 @@ class TestTimeoutSettings:
     def test_nats_retry_attempts_minimum_is_one(self) -> None:
         """nats_retry_attempts rejects values below 1."""
         import pytest as _pytest
+
         with _pytest.raises(Exception):
             Settings(nats_retry_attempts=0)
 
     def test_nats_retry_interval_must_be_positive(self) -> None:
         """nats_retry_interval rejects non-positive values."""
         import pytest as _pytest
+
         with _pytest.raises(Exception):
             Settings(nats_retry_interval=0.0)
 

@@ -25,12 +25,15 @@ class TestWebhookPayloadTimestamp:
 class TestPackageExports:
     def test_hermes_exports_hermes_event_base(self) -> None:
         import hermes
+
         assert hasattr(hermes, "HermesEventBase")
 
     def test_hermes_does_not_export_agent_event(self) -> None:
         import hermes
+
         assert not hasattr(hermes, "AgentEvent")
 
     def test_hermes_does_not_export_task_event(self) -> None:
         import hermes
+
         assert not hasattr(hermes, "TaskEvent")

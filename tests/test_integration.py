@@ -36,9 +36,7 @@ def _sign(body: bytes) -> str:
 # ---------------------------------------------------------------------------
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Skip all integration tests if NATS is unreachable."""
     # Evaluated lazily at collection time via a custom marker skip mechanism
     pass
@@ -57,9 +55,7 @@ def require_nats() -> None:  # type: ignore[return]
         except Exception:
             return False
 
-    reachable = _asyncio.get_event_loop_policy().new_event_loop().run_until_complete(
-        _check()
-    )
+    reachable = _asyncio.get_event_loop_policy().new_event_loop().run_until_complete(_check())
     if not reachable:
         pytest.skip("NATS server not available at " + _NATS_URL, allow_module_level=True)
 
@@ -131,9 +127,7 @@ class TestPublisherIntegration:
         assert len(received) == 1
         assert received[0].subject == "hi.tasks.team-42.t-007.updated"
 
-    async def test_publish_tracks_active_subjects(
-        self, publisher: Publisher
-    ) -> None:
+    async def test_publish_tracks_active_subjects(self, publisher: Publisher) -> None:
         """active_subjects is updated after each successful publish."""
         payload = WebhookPayload(
             event="agent.deleted",
@@ -237,9 +231,7 @@ class TestWebhookIntegration:
         }
         body_bytes = json.dumps(payload).encode()
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/webhook",
                 content=body_bytes,
@@ -272,9 +264,7 @@ class TestLifespan:
 
         assert not test_app.state.publisher.is_connected
 
-    async def test_lifespan_handles_nats_unavailable(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_lifespan_handles_nats_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Lifespan starts in degraded mode when NATS is unreachable after all retry attempts."""
         from unittest.mock import patch
         from hermes.config import Settings
@@ -502,9 +492,7 @@ class TestHealthAndReadyIntegration:
         disconnected_pub = Publisher()  # never connected
         app.state.publisher = disconnected_pub
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/health")
         assert response.status_code == 503
         body = response.json()
@@ -518,9 +506,7 @@ class TestHealthAndReadyIntegration:
         disconnected_pub = Publisher()  # never connected
         app.state.publisher = disconnected_pub
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/ready")
         assert response.status_code == 503
         body = response.json()
@@ -656,9 +642,7 @@ class TestReconnectLifecycle:
         finally:
             await pub.disconnect()
 
-    async def test_disconnect_and_reconnect_restores_connected_state(
-        self, nats_url: str
-    ) -> None:
+    async def test_disconnect_and_reconnect_restores_connected_state(self, nats_url: str) -> None:
         """Calling connect() after disconnect() results in is_connected=True again."""
         pub = Publisher()
         await pub.connect(nats_url)
@@ -676,9 +660,7 @@ class TestReconnectLifecycle:
         finally:
             await pub2.disconnect()
 
-    async def test_reconnect_count_increments_via_callback(
-        self, nats_url: str
-    ) -> None:
+    async def test_reconnect_count_increments_via_callback(self, nats_url: str) -> None:
         """Manually invoking the reconnected callback increments reconnect_count."""
         pub = Publisher()
         await pub.connect(nats_url)

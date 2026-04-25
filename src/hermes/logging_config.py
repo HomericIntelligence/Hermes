@@ -50,7 +50,9 @@ def setup_logging(level: int = logging.INFO, json_format: bool = False) -> None:
     stacking duplicates.
     """
     formatter: logging.Formatter = (
-        JsonFormatter() if json_format else logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+        JsonFormatter()
+        if json_format
+        else logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
     )
 
     root = logging.getLogger()
@@ -59,7 +61,9 @@ def setup_logging(level: int = logging.INFO, json_format: bool = False) -> None:
     # Replace existing StreamHandlers (avoid duplicates on repeated calls).
     # FileHandlers are intentionally left untouched.
     existing_stream_handlers = [
-        h for h in root.handlers if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        h
+        for h in root.handlers
+        if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
     ]
     for h in existing_stream_handlers:
         root.removeHandler(h)

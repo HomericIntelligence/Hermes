@@ -212,7 +212,9 @@ class TestSignalHandler:
 
 class TestLifespanShutdown:
     @pytest.mark.asyncio
-    async def test_shutdown_waits_for_inflight_requests(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_shutdown_waits_for_inflight_requests(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Lifespan teardown waits until _inflight reaches 0 before disconnecting."""
         import hermes.server as srv
         from hermes.config import Settings
