@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 import hmac as hmac_mod
 import json
+import logging
 import os
 
 import nats
@@ -693,6 +694,69 @@ class TestReconnectLifecycle:
 
 
 # ---------------------------------------------------------------------------
+# Issue #147 — lifespan abort / degraded state
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestLifespanAbort:
+    """Verify that /health returns 503 when the publisher is disconnected (degraded state).
+
+    When NATS is unavailable at startup the lifespan raises and the app never
+    serves traffic.  This class tests the *degraded-state* behaviour: a
+    Publisher that never connected is injected into app.state so that the
+    health endpoint can be exercised independently of lifespan.
+    """
+
+    async def test_health_returns_503_when_publisher_disconnected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """GET /health returns 503 and status='degraded' when publisher is not connected."""
+        from hermes.server import app
+
+        disconnected = Publisher()  # never connected — is_connected is False
+        app.state.publisher = disconnected
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get("/health")
+
+        assert response.status_code == 503
+        body = response.json()
+        assert body["status"] == "degraded"
+        assert body["nats_connected"] is False
+
+    async def test_webhook_returns_503_when_publisher_disconnected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """POST /webhook returns 503 when the publisher has never connected (bad NATS URL)."""
+        from hermes.server import app
+
+        monkeypatch.setenv("WEBHOOK_SECRET", "")
+        disconnected = Publisher()  # never connected — nats://localhost:9999 equivalent
+        app.state.publisher = disconnected
+
+        payload = {
+            "event": "agent.created",
+            "data": {"host": "abort-host", "name": "abort-agent"},
+            "timestamp": "2026-04-22T00:00:00Z",
+        }
+        body_bytes = json.dumps(payload).encode()
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/webhook",
+                content=body_bytes,
+                headers={"Content-Type": "application/json"},
+            )
+
+        assert response.status_code == 503
+
+
+# ---------------------------------------------------------------------------
 # Issue #163: Server startup respects HERMES_HOST env var
 # ---------------------------------------------------------------------------
 
@@ -802,6 +866,70 @@ class TestRetryBehaviour:
 
 
 # ---------------------------------------------------------------------------
+# Issue #215 — full lifespan shutdown sequence
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestLifespanShutdown:
+    """Verify the graceful shutdown sequence via the lifespan context manager."""
+
+    async def test_lifespan_shutdown_rejects_webhook_but_allows_health(
+        self, monkeypatch: pytest.MonkeyPatch, nats_url: str
+    ) -> None:
+        """After shutdown signal, /webhook → 503 while /health remains available."""
+        import hermes.server as _server
+        from hermes.server import app, lifespan
+
+        monkeypatch.setenv("NATS_URL", nats_url)
+
+        from fastapi import FastAPI
+
+        test_app = FastAPI()
+
+        async with lifespan(test_app):
+            # App started, publisher connected: /health should be 200.
+            test_app_pub = test_app.state.publisher
+            app.state.publisher = test_app_pub
+
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                health_before = await client.get("/health")
+            assert health_before.status_code == 200
+
+            # Simulate shutdown signal by setting the module-level event.
+            _server._shutdown_event.set()
+
+            # /webhook must now return 503 (ShutdownMiddleware).
+            payload = {
+                "event": "agent.created",
+                "data": {"host": "shutdown-host", "name": "shutdown-agent"},
+                "timestamp": "2026-04-22T00:00:00Z",
+            }
+            body_bytes = json.dumps(payload).encode()
+
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                webhook_response = await client.post(
+                    "/webhook",
+                    content=body_bytes,
+                    headers={"Content-Type": "application/json"},
+                )
+            assert webhook_response.status_code == 503
+
+            # /health must still respond (ShutdownMiddleware only blocks /webhook).
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                health_after = await client.get("/health")
+            assert health_after.status_code in {200, 503}
+            body = health_after.json()
+            assert body["shutting_down"] is True
+
+
+# ---------------------------------------------------------------------------
 # Issue #231: request_id appears in NATS message bytes
 # ---------------------------------------------------------------------------
 
@@ -865,3 +993,37 @@ class TestRequestIdInNats:
         finally:
             await sub.unsubscribe()
             await pub.disconnect()
+
+
+# ---------------------------------------------------------------------------
+# Issue #250 — startup banner log messages
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestStartupBanner:
+    """Verify that the startup banner is emitted during real lifespan startup."""
+
+    async def test_startup_banner_logs_version_config_and_nats_status(
+        self, monkeypatch: pytest.MonkeyPatch, nats_url: str, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """lifespan emits version, config, and NATS connectivity banner lines."""
+        from hermes.server import lifespan
+        from fastapi import FastAPI
+
+        monkeypatch.setenv("NATS_URL", nats_url)
+
+        test_app = FastAPI()
+
+        with caplog.at_level(logging.INFO, logger="hermes.server"):
+            async with lifespan(test_app):
+                pass  # startup complete; banner already logged
+
+        log_text = "\n".join(r.message for r in caplog.records)
+
+        # Version line
+        assert "hermes" in log_text
+        # Config line contains the NATS URL
+        assert nats_url in log_text or "nats_url=" in log_text
+        # NATS connectivity status
+        assert "connected=" in log_text
