@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
 import time
 from collections import OrderedDict, deque
 from typing import Any
@@ -36,6 +37,14 @@ class UnknownEventTypeError(ValueError):
 
 _DEAD_LETTER_SUBJECT_PREFIX = "hi.deadletter"
 _SLUG_MAX_LEN = 64  # Maximum characters per NATS subject slug token
+
+# Transient NATS errors that are safe to retry.  Non-retryable errors (e.g.
+# AuthorizationError, BadSubjectError) propagate immediately without retrying.
+_RETRYABLE_PUBLISH_ERRORS = (
+    nats.errors.TimeoutError,
+    nats.errors.NoRespondersError,
+    nats.errors.DrainTimeoutError,
+)
 
 
 class Publisher:
@@ -201,8 +210,6 @@ class Publisher:
                 raise UnknownEventTypeError(payload.event)
             return
 
-        _RETRYABLE = (nats.errors.TimeoutError, nats.errors.NoRespondersError)
-
         last_exc: Exception | None = None
         for attempt in range(retries):
             try:
@@ -213,10 +220,10 @@ class Publisher:
                 self._track_subject(subject)
                 logger.info("Published to %s (request_id=%s)", subject, request_id)
                 return
-            except _RETRYABLE as exc:
+            except _RETRYABLE_PUBLISH_ERRORS as exc:
                 last_exc = exc
                 if attempt < retries - 1:
-                    delay = min(base_delay * (2 ** attempt), 2.0)
+                    delay = min(base_delay * (2 ** attempt), 2.0) * random.uniform(0.5, 1.5)
                     logger.warning(
                         "Transient NATS error on attempt %d/%d for %s; retrying in %.3fs: %s",
                         attempt + 1,
