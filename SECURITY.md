@@ -9,7 +9,9 @@
 
 **Version Support Policy:**
 
-ProjectHermes is in active development (pre-v1.0). We recommend always running the latest commit from the `main` branch to receive the most up-to-date security fixes and improvements. Once we reach v1.0, we will provide a more detailed long-term support (LTS) policy.
+ProjectHermes is in active development (pre-v1.0). We recommend always running the latest commit
+from the `main` branch to receive the most up-to-date security fixes and improvements. Once we
+reach v1.0, we will provide a more detailed long-term support (LTS) policy.
 
 ## Reporting Security Vulnerabilities
 
@@ -88,6 +90,7 @@ We use the following severity levels:
 If a `WEBHOOK_SECRET` is compromised or needs to be rotated, follow these steps:
 
 1. **Generate a new secret**
+
    ```bash
    openssl rand -hex 32
    ```
@@ -97,6 +100,7 @@ If a `WEBHOOK_SECRET` is compromised or needs to be rotated, follow these steps:
    variable in your `.env` file, secrets manager, or container orchestration platform).
 
 3. **Restart the service**
+
    ```bash
    just start
    # or, in Docker:
@@ -104,9 +108,11 @@ If a `WEBHOOK_SECRET` is compromised or needs to be rotated, follow these steps:
    ```
 
 4. **Verify the service is healthy**
+
    ```bash
    just health
    ```
+
    The `/health` endpoint should return `{"status": "ok"}` with a 200 response.
 
 5. **Update the secret in external services**

@@ -1,10 +1,15 @@
 # ProjectHermes
 
-ProjectHermes bridges external webhooks (GitHub, Slack, third-party APIs) to [NATS JetStream](https://docs.nats.io/nats-concepts/jetstream) for pub/sub fan-out and event replay across the HomericIntelligence ecosystem.
+ProjectHermes bridges external webhooks (GitHub, Slack, third-party APIs) to
+[NATS JetStream](https://docs.nats.io/nats-concepts/jetstream) for pub/sub fan-out and event
+replay across the HomericIntelligence ecosystem.
 
 ## Purpose
 
-External services fire HTTP webhooks when events occur. Hermes receives those webhooks, validates them, and publishes structured messages to NATS subjects. Downstream services (Argus, Agamemnon, Telemachy) subscribe to relevant subjects and react accordingly. JetStream provides durable storage so late-joining subscribers can replay missed events.
+External services fire HTTP webhooks when events occur. Hermes receives those webhooks, validates
+them, and publishes structured messages to NATS subjects. Downstream services (Argus, Agamemnon,
+Telemachy) subscribe to relevant subjects and react accordingly. JetStream provides durable
+storage so late-joining subscribers can replay missed events.
 
 ```
 External Service ──HTTP POST /webhook──► Hermes ──publish──► NATS JetStream
@@ -55,7 +60,10 @@ Example: `hi.agents.docker-desktop.researcher.created`
 
 ### Task Events
 
-> **Note:** Task webhook events (`task.updated`, `task.completed`, `task.failed`) are defined as forward-compatible scaffolding but are **not yet emitted** by the upstream service. See [Odysseus#33](https://github.com/HomericIntelligence/Odysseus/issues/33) for the tracking issue.
+> **Note:** Task webhook events (`task.updated`, `task.completed`, `task.failed`) are defined as
+> forward-compatible scaffolding but are **not yet emitted** by the upstream service.
+> See [Odysseus#33](https://github.com/HomericIntelligence/Odysseus/issues/33) for the tracking
+> issue.
 
 ```
 hi.tasks.{team_id}.{task_id}.{event}
@@ -78,10 +86,13 @@ All NATS messages published by Hermes include a `schema_version` integer field.
 | `schema_version` | 1             | Wire format version; increments on breaking changes |
 
 **Consumer guidance:**
+
 - Check `schema_version` before deserializing the `data` payload.
-- If `schema_version` is higher than your consumer knows about, log a warning and skip or dead-letter the message rather than crashing.
+- If `schema_version` is higher than your consumer knows about, log a warning and skip or
+  dead-letter the message rather than crashing.
 - Additive changes (new optional fields) are backwards-compatible and do not bump the version.
-- There is no automated migration; consumers must handle multiple versions side-by-side during rolling deployments.
+- There is no automated migration; consumers must handle multiple versions side-by-side during
+  rolling deployments.
 
 ## Endpoints
 
@@ -99,8 +110,10 @@ Hermes exposes several endpoints for webhooks, health checks, and observability:
 
 ### Health Checks
 
-- **`/health`** returns `200 OK` when NATS is connected, `503 Service Unavailable` when disconnected. Use this for liveness probes and metrics scraping (e.g., Prometheus).
-- **`/ready`** returns `200 OK` when ready to accept webhooks (NATS connected), `503 Service Unavailable` otherwise. Use for Kubernetes readiness probes.
+- **`/health`** returns `200 OK` when NATS is connected, `503 Service Unavailable` when
+  disconnected. Use this for liveness probes and metrics scraping (e.g., Prometheus).
+- **`/ready`** returns `200 OK` when ready to accept webhooks (NATS connected),
+  `503 Service Unavailable` otherwise. Use for Kubernetes readiness probes.
 
 ## Configuration
 
@@ -119,7 +132,7 @@ cp .env.example .env
 | NATS_PUBLISH_TIMEOUT  | 5.0              | Seconds to wait for publish confirmation                    |
 | HERMES_HOST           | 127.0.0.1        | Host/IP to bind (use 0.0.0.0 in Docker)                   |
 | HERMES_PORT           | 8080             | Port Hermes listens on                                      |
-| HERMES_PUBLIC_URL     | http://localhost:{port} | Externally-reachable base URL for the /webhook endpoint |
+| HERMES_PUBLIC_URL     | `http://localhost:{port}` | Externally-reachable base URL for the /webhook endpoint |
 | WEBHOOK_SECRET        |                  | HMAC secret for webhook validation (min 32 chars)           |
 | WEBHOOK_RATE_LIMIT    | 60/minute        | Rate limit per IP (e.g., 60/minute, 100/hour)              |
 | MAX_PAYLOAD_BYTES     | 1048576          | Max webhook payload size in bytes (1 MiB default)           |
@@ -133,20 +146,29 @@ cp .env.example .env
 | TLS_KEY_FILE          |                  | Path to client TLS private key (PEM)                        |
 | TLS_VERIFY            | true             | Verify TLS certificates (set false only for dev/testing)    |
 
-> **Security:** If `WEBHOOK_SECRET` is empty, HMAC validation is **disabled** and a warning is logged at startup. Always set a secret in production.
-
-> **Security:** `TLS_VERIFY=false` disables TLS certificate verification and **must never be used in production**. When this option is set alongside `HERMES_HOST=0.0.0.0` (the production binding), Hermes logs a loud `WARNING` at startup. Use `TLS_CA_BUNDLE` to supply a trusted CA instead.
+> **Security:** If `WEBHOOK_SECRET` is empty, HMAC validation is **disabled** and a warning is
+> logged at startup. Always set a secret in production.
+>
+> **Security:** `TLS_VERIFY=false` disables TLS certificate verification and **must never be used
+> in production**. When this option is set alongside `HERMES_HOST=0.0.0.0` (the production
+> binding), Hermes logs a loud `WARNING` at startup. Use `TLS_CA_BUNDLE` to supply a trusted CA
+> instead.
 
 ### NATS Reconnection
 
 Hermes connects to NATS with the following behavior:
 
-- **Initial connection:** Uses `NATS_CONNECT_TIMEOUT` to establish the first connection to the NATS server.
-- **Automatic reconnection:** When an established connection drops, nats-py automatically attempts to reconnect according to its internal backoff strategy.
-- **Publish timeout:** Messages published to JetStream have a per-operation timeout of `NATS_PUBLISH_TIMEOUT`, ensuring pub/sub calls don't hang indefinitely.
-- **Connection lifecycle:** Use `SHUTDOWN_TIMEOUT` to allow graceful in-flight request completion before forced shutdown.
+- **Initial connection:** Uses `NATS_CONNECT_TIMEOUT` to establish the first connection to the
+  NATS server.
+- **Automatic reconnection:** When an established connection drops, nats-py automatically attempts
+  to reconnect according to its internal backoff strategy.
+- **Publish timeout:** Messages published to JetStream have a per-operation timeout of
+  `NATS_PUBLISH_TIMEOUT`, ensuring pub/sub calls don't hang indefinitely.
+- **Connection lifecycle:** Use `SHUTDOWN_TIMEOUT` to allow graceful in-flight request completion
+  before forced shutdown.
 
 If connection issues occur, check:
+
 1. NATS server is reachable at `NATS_URL`
 2. Network connectivity and firewall rules
 3. TLS configuration if using `tls://` scheme
@@ -154,7 +176,8 @@ If connection issues occur, check:
 
 ## TLS Configuration
 
-For production deployments, Hermes can be configured to use TLS for NATS connections. Set the following environment variables:
+For production deployments, Hermes can be configured to use TLS for NATS connections.
+Set the following environment variables:
 
 | Variable       | Description                                                            |
 |----------------|------------------------------------------------------------------------|
