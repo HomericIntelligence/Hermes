@@ -92,6 +92,7 @@ class TestPublisherIntegration:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.agents.>", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         payload = WebhookPayload(
             event="agent.created",
@@ -117,6 +118,7 @@ class TestPublisherIntegration:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.tasks.>", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         payload = WebhookPayload(
             event="task.updated",
