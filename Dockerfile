@@ -1,7 +1,7 @@
 FROM python:3.12-slim AS builder
 WORKDIR /build
-RUN pip install --no-cache-dir fastapi "uvicorn[standard]" nats-py "pydantic>=2.0" pydantic-settings httpx prometheus_client \
-    --target /build/deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt --target /build/deps
 
 FROM python:3.12-slim
 WORKDIR /app
