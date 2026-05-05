@@ -383,7 +383,7 @@ async def receive_webhook(request: Request, settings: SettingsDep) -> WebhookAcc
     "/subjects",
     response_model=SubjectsResponse,
 )
-@limiter.limit("60/minute")
+@limiter.limit(lambda: get_settings().subjects_rate_limit)
 async def list_subjects(request: Request, settings: SettingsDep) -> SubjectsResponse:
     """Return the list of NATS subjects that have been published to."""
     publisher: Publisher = app.state.publisher

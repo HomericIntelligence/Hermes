@@ -75,6 +75,8 @@ Every message published to NATS JetStream includes a `schema_version` integer fi
 | AGAMEMNON_API_KEY     |                                | API key for authenticating with Agamemnon               |
 | AGAMEMNON_TIMEOUT     | 10.0                           | Agamemnon API call timeout in seconds                   |
 | SHUTDOWN_TIMEOUT      | 10.0                           | Graceful shutdown timeout in seconds                    |
+| WEBHOOK_RATE_LIMIT    | 60/minute                      | Rate limit for POST /webhook endpoint                   |
+| SUBJECTS_RATE_LIMIT   | 60/minute                      | Rate limit for GET /subjects endpoint                   |
 
 Configure external services to POST to `http://<hermes-host>:<HERMES_PORT>/webhook`.
 
