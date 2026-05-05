@@ -47,7 +47,6 @@ logger = logging.getLogger(__name__)
 
 _shutdown_event: asyncio.Event = asyncio.Event()
 _inflight: int = 0
-_inflight_lock: asyncio.Lock = asyncio.Lock()
 
 _NATS_CONNECT_TIMEOUT = 5
 
@@ -133,6 +132,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     _shutdown_event = asyncio.Event()
     _inflight = 0
+    app.state.inflight_lock = asyncio.Lock()
 
     setup_logging(json_format=settings.log_json)
 
@@ -156,7 +156,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         elapsed = 0.0
         logger.info("Shutdown: waiting up to %.1fs for in-flight requests to complete", deadline)
         while elapsed < deadline:
-            async with _inflight_lock:
+            async with app.state.inflight_lock:
                 remaining = _inflight
             if remaining == 0:
                 break
