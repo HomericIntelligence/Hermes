@@ -68,6 +68,16 @@ format:
 typecheck:
     pixi run mypy --strict src/hermes/
 
+# === Requirements ===
+
+# Regenerate requirements.txt from pixi.lock
+sync-reqs:
+    python scripts/sync_requirements.py
+
+# Validate requirements.txt is in sync with pixi.lock (CI check)
+check-reqs:
+    python scripts/sync_requirements.py --check
+
 # === Docker ===
 
 # Build the Docker image
