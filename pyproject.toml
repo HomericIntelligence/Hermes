@@ -28,6 +28,7 @@ addopts = [
     "--cov=hermes",
     "--cov-report=term-missing",
     "--cov-report=html",
+    "--cov-report=xml",
 ]
 markers = [
     "integration: requires a running NATS server",
@@ -37,6 +38,8 @@ markers = [
 source = ["hermes"]
 
 [tool.coverage.report]
+fail_under = 80
+precision = 2
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
@@ -44,6 +47,7 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
+    "def __repr__",
 ]
 
 [tool.mypy]
