@@ -22,7 +22,7 @@ classifiers = [
 packages = ["src/hermes"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 asyncio_mode = "auto"
 addopts = [
     "--cov=hermes",

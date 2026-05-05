@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import hmac as hmac_mod
 import json
 import os
 from collections.abc import Generator
@@ -12,6 +10,8 @@ from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
+
+from helpers import sign_body
 
 _TEST_SECRET = "test-webhook-secret-padding-xxxxx"
 _VALID_PAYLOAD = {
@@ -22,7 +22,7 @@ _VALID_PAYLOAD = {
 
 
 def _sign(body: bytes) -> str:
-    return hmac_mod.new(_TEST_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    return sign_body(_TEST_SECRET, body)
 
 
 @contextmanager
