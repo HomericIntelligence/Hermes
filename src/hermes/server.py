@@ -205,6 +205,29 @@ async def _http_exception_handler_with_request_id(
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
+async def require_admin_key(
+    request: Request,
+    settings: SettingsDep,
+) -> None:
+    """Dependency that enforces Bearer token auth for admin endpoints."""
+    if not settings.admin_api_key:
+        raise HTTPException(status_code=403, detail="ADMIN_API_KEY is not configured")
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid Authorization header",
+            headers={"WWW-Authenticate": 'Bearer realm="hermes"'},
+        )
+    provided = auth.removeprefix("Bearer ")
+    if not hmac.compare_digest(provided, settings.admin_api_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid admin API key",
+            headers={"WWW-Authenticate": 'Bearer realm="hermes"'},
+        )
+
+
 # ---------------------------------------------------------------------------
 # Middleware
 # ---------------------------------------------------------------------------
@@ -404,6 +427,7 @@ async def metrics() -> Response:
 async def dead_letters(
     limit: int | None = None,
     offset: int = 0,
+    _: None = Depends(require_admin_key),
 ) -> DeadLettersResponse:
     """Return the in-memory dead-letter queue with optional pagination.
 
@@ -419,7 +443,7 @@ async def dead_letters(
 
 
 @app.delete("/dead-letters", status_code=status.HTTP_200_OK)
-async def drain_dead_letters() -> dict[str, int]:
+async def drain_dead_letters(_: None = Depends(require_admin_key)) -> dict[str, int]:
     """Drain (clear) the in-memory dead-letter queue and return the count of drained items."""
     publisher: Publisher = app.state.publisher
     drained = publisher.drain_dead_letters()

@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 _TEST_SECRET = "test-webhook-secret-padding-xxxxx"
+_TEST_ADMIN_KEY = "test-admin-key"
 
 
 def _sign(body: bytes) -> str:
@@ -18,8 +19,9 @@ def _sign(body: bytes) -> str:
 
 
 def _build_client(dead_letters: list | None = None) -> TestClient:
-    from hermes.server import app
+    from hermes.config import get_settings
     from hermes.publisher import Publisher
+    from hermes.server import app
 
     mock_publisher = MagicMock(spec=Publisher)
     mock_publisher.is_connected = True
@@ -28,6 +30,7 @@ def _build_client(dead_letters: list | None = None) -> TestClient:
     mock_publisher.dead_letters = dead_letters if dead_letters is not None else []
 
     app.state.publisher = mock_publisher
+    get_settings().admin_api_key = _TEST_ADMIN_KEY
     return TestClient(app, raise_server_exceptions=True)
 
 
@@ -54,15 +57,18 @@ class TestMetricsEndpoint:
         assert "hermes_active_subjects_count" in text
 
 
+_AUTH_HEADER = {"Authorization": f"Bearer {_TEST_ADMIN_KEY}"}
+
+
 class TestDeadLettersEndpoint:
     def test_dead_letters_returns_200(self) -> None:
         client = _build_client()
-        response = client.get("/dead-letters")
+        response = client.get("/dead-letters", headers=_AUTH_HEADER)
         assert response.status_code == 200
 
     def test_dead_letters_returns_list_when_empty(self) -> None:
         client = _build_client()
-        body = client.get("/dead-letters").json()
+        body = client.get("/dead-letters", headers=_AUTH_HEADER).json()
         assert "items" in body
         assert isinstance(body["items"], list)
         assert body["items"] == []
@@ -70,7 +76,7 @@ class TestDeadLettersEndpoint:
     def test_dead_letters_returns_entries(self) -> None:
         entries = [{"event": "unknown.event", "data": {"foo": "bar"}}]
         client = _build_client(dead_letters=entries)
-        body = client.get("/dead-letters").json()
+        body = client.get("/dead-letters", headers=_AUTH_HEADER).json()
         assert body["items"] == entries
 
 

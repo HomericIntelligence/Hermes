@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     agamemnon_url: str = ""
     agamemnon_api_key: str = ""
     agamemnon_timeout: float = Field(default=10.0, gt=0)
+    admin_api_key: str = ""
     shutdown_timeout: float = Field(default=10.0, gt=0)
     max_payload_bytes: int = 1_048_576
     enable_dead_letter: bool = True

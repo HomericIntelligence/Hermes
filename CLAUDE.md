@@ -68,6 +68,7 @@ Every message published to NATS JetStream includes a `schema_version` integer fi
 | HERMES_PORT           | 8080                           | Port Hermes listens on                                  |
 | HERMES_PUBLIC_URL     | `http://localhost:{HERMES_PORT}` | Externally-reachable base URL for the /webhook endpoint |
 | WEBHOOK_SECRET        |                                | HMAC secret for webhook validation (minimum 32 characters) |
+| ADMIN_API_KEY         |                                | Bearer token for `GET /dead-letters` and `DELETE /dead-letters`. If unset, both endpoints return 403. |
 | MAX_PAYLOAD_BYTES     | 1048576                        | Maximum accepted request body size in bytes (1 MB)      |
 | NATS_CONNECT_TIMEOUT  | 5.0                            | NATS connection timeout in seconds                      |
 | NATS_PUBLISH_TIMEOUT  | 5.0                            | NATS publish timeout in seconds                         |

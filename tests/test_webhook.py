@@ -676,10 +676,16 @@ class TestWildcardInjectionSanitization:
         assert ">" not in published_subjects[0]
 
 
+_ADMIN_KEY = "test-admin-key"
+
+
 class TestDeadLettersGetEndpoint:
     """Tests for GET /dead-letters with pagination (issues #108)."""
 
-    def _build_client_with_dead_letters(self, items: list[dict]) -> TestClient:
+    def _build_client_with_dead_letters(
+        self, items: list[dict], admin_api_key: str = _ADMIN_KEY
+    ) -> TestClient:
+        from hermes.config import get_settings
         from hermes.publisher import Publisher
         from hermes.server import app
 
@@ -689,16 +695,17 @@ class TestDeadLettersGetEndpoint:
         mock_publisher.publish = AsyncMock()
         mock_publisher.dead_letters = items
         app.state.publisher = mock_publisher
+        get_settings().admin_api_key = admin_api_key
         return TestClient(app, raise_server_exceptions=True)
 
     def test_dead_letters_returns_200(self) -> None:
         client = self._build_client_with_dead_letters([])
-        resp = client.get("/dead-letters")
+        resp = client.get("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"})
         assert resp.status_code == 200
 
     def test_dead_letters_empty_queue_structure(self) -> None:
         client = self._build_client_with_dead_letters([])
-        body = client.get("/dead-letters").json()
+        body = client.get("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 0
         assert body["offset"] == 0
         assert body["limit"] is None
@@ -707,7 +714,7 @@ class TestDeadLettersGetEndpoint:
     def test_dead_letters_returns_all_by_default(self) -> None:
         items = [{"event": f"evt.{i}", "subject": f"hi.deadletter.evt-{i}"} for i in range(5)]
         client = self._build_client_with_dead_letters(items)
-        body = client.get("/dead-letters").json()
+        body = client.get("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 5
         assert len(body["items"]) == 5
         assert body["limit"] is None
@@ -715,7 +722,7 @@ class TestDeadLettersGetEndpoint:
     def test_dead_letters_limit_param(self) -> None:
         items = [{"event": f"evt.{i}", "subject": f"hi.deadletter.evt-{i}"} for i in range(10)]
         client = self._build_client_with_dead_letters(items)
-        body = client.get("/dead-letters?limit=3").json()
+        body = client.get("/dead-letters?limit=3", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 10
         assert len(body["items"]) == 3
         assert body["limit"] == 3
@@ -724,7 +731,7 @@ class TestDeadLettersGetEndpoint:
     def test_dead_letters_offset_param(self) -> None:
         items = [{"event": f"evt.{i}", "subject": f"hi.deadletter.evt-{i}"} for i in range(10)]
         client = self._build_client_with_dead_letters(items)
-        body = client.get("/dead-letters?offset=5").json()
+        body = client.get("/dead-letters?offset=5", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 10
         assert len(body["items"]) == 5
         assert body["offset"] == 5
@@ -733,7 +740,7 @@ class TestDeadLettersGetEndpoint:
     def test_dead_letters_limit_and_offset(self) -> None:
         items = [{"event": f"evt.{i}", "subject": f"hi.deadletter.evt-{i}"} for i in range(20)]
         client = self._build_client_with_dead_letters(items)
-        body = client.get("/dead-letters?offset=5&limit=10").json()
+        body = client.get("/dead-letters?offset=5&limit=10", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 20
         assert body["offset"] == 5
         assert body["limit"] == 10
@@ -744,22 +751,49 @@ class TestDeadLettersGetEndpoint:
     def test_dead_letters_offset_beyond_total_returns_empty_items(self) -> None:
         items = [{"event": "evt.0", "subject": "hi.deadletter.evt-0"}]
         client = self._build_client_with_dead_letters(items)
-        body = client.get("/dead-letters?offset=100").json()
+        body = client.get("/dead-letters?offset=100", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 1
         assert body["items"] == []
 
     def test_dead_letters_limit_larger_than_total(self) -> None:
         items = [{"event": "evt.0", "subject": "hi.deadletter.evt-0"}]
         client = self._build_client_with_dead_letters(items)
-        body = client.get("/dead-letters?limit=100").json()
+        body = client.get("/dead-letters?limit=100", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["total"] == 1
         assert len(body["items"]) == 1
+
+    def test_get_dead_letters_no_key_configured_returns_403(self) -> None:
+        client = self._build_client_with_dead_letters([], admin_api_key="")
+        resp = client.get("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"})
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "ADMIN_API_KEY is not configured"
+
+    def test_get_dead_letters_missing_auth_header_returns_401(self) -> None:
+        client = self._build_client_with_dead_letters([])
+        resp = client.get("/dead-letters")
+        assert resp.status_code == 401
+        assert "WWW-Authenticate" in resp.headers
+        assert resp.headers["WWW-Authenticate"] == 'Bearer realm="hermes"'
+
+    def test_get_dead_letters_wrong_key_returns_401(self) -> None:
+        client = self._build_client_with_dead_letters([])
+        resp = client.get("/dead-letters", headers={"Authorization": "Bearer wrong-key"})
+        assert resp.status_code == 401
+        assert "WWW-Authenticate" in resp.headers
+
+    def test_get_dead_letters_malformed_auth_header_returns_401(self) -> None:
+        client = self._build_client_with_dead_letters([])
+        resp = client.get("/dead-letters", headers={"Authorization": "NotBearer token"})
+        assert resp.status_code == 401
 
 
 class TestDeadLettersDeleteEndpoint:
     """Tests for DELETE /dead-letters (issue #110)."""
 
-    def _build_client_with_drain(self, drained_count: int) -> TestClient:
+    def _build_client_with_drain(
+        self, drained_count: int, admin_api_key: str = _ADMIN_KEY
+    ) -> TestClient:
+        from hermes.config import get_settings
         from hermes.publisher import Publisher
         from hermes.server import app
 
@@ -769,24 +803,26 @@ class TestDeadLettersDeleteEndpoint:
         mock_publisher.publish = AsyncMock()
         mock_publisher.drain_dead_letters = MagicMock(return_value=drained_count)
         app.state.publisher = mock_publisher
+        get_settings().admin_api_key = admin_api_key
         return TestClient(app, raise_server_exceptions=True)
 
     def test_delete_dead_letters_returns_200(self) -> None:
         client = self._build_client_with_drain(0)
-        resp = client.delete("/dead-letters")
+        resp = client.delete("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"})
         assert resp.status_code == 200
 
     def test_delete_dead_letters_returns_drained_count_zero(self) -> None:
         client = self._build_client_with_drain(0)
-        body = client.delete("/dead-letters").json()
+        body = client.delete("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["drained"] == 0
 
     def test_delete_dead_letters_returns_drained_count_nonzero(self) -> None:
         client = self._build_client_with_drain(42)
-        body = client.delete("/dead-letters").json()
+        body = client.delete("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"}).json()
         assert body["drained"] == 42
 
     def test_delete_dead_letters_calls_drain(self) -> None:
+        from hermes.config import get_settings
         from hermes.publisher import Publisher
         from hermes.server import app
 
@@ -796,9 +832,34 @@ class TestDeadLettersDeleteEndpoint:
         mock_publisher.publish = AsyncMock()
         mock_publisher.drain_dead_letters = MagicMock(return_value=5)
         app.state.publisher = mock_publisher
+        get_settings().admin_api_key = _ADMIN_KEY
         client = TestClient(app, raise_server_exceptions=True)
-        client.delete("/dead-letters")
+        client.delete("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"})
         mock_publisher.drain_dead_letters.assert_called_once()
+
+    def test_delete_dead_letters_no_key_configured_returns_403(self) -> None:
+        client = self._build_client_with_drain(0, admin_api_key="")
+        resp = client.delete("/dead-letters", headers={"Authorization": f"Bearer {_ADMIN_KEY}"})
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "ADMIN_API_KEY is not configured"
+
+    def test_delete_dead_letters_missing_auth_header_returns_401(self) -> None:
+        client = self._build_client_with_drain(0)
+        resp = client.delete("/dead-letters")
+        assert resp.status_code == 401
+        assert "WWW-Authenticate" in resp.headers
+        assert resp.headers["WWW-Authenticate"] == 'Bearer realm="hermes"'
+
+    def test_delete_dead_letters_wrong_key_returns_401(self) -> None:
+        client = self._build_client_with_drain(0)
+        resp = client.delete("/dead-letters", headers={"Authorization": "Bearer wrong-key"})
+        assert resp.status_code == 401
+        assert "WWW-Authenticate" in resp.headers
+
+    def test_delete_dead_letters_malformed_auth_header_returns_401(self) -> None:
+        client = self._build_client_with_drain(0)
+        resp = client.delete("/dead-letters", headers={"Authorization": "Token abc123"})
+        assert resp.status_code == 401
 
 
 class TestPublisherDrainDeadLetters:
