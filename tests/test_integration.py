@@ -58,7 +58,7 @@ def require_nats() -> None:  # type: ignore[return]
         except Exception:
             return False
 
-    reachable = _asyncio.get_event_loop_policy().new_event_loop().run_until_complete(_check())
+    reachable = _asyncio.run(_check())
     if not reachable:
         pytest.skip("NATS server not available at " + _NATS_URL, allow_module_level=True)
 
