@@ -41,6 +41,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `gitleaks-action` reverted (requires org license); pip-audit set to `continue-on-error`
 - CI: valid job IDs in `_required.yml` (no slashes in keys)
 - `prometheus_client` added to Docker image dependencies
+- `no-commit-to-branch` pre-commit hook removed; it caused every push to `main` to fail in
+  CI by design (`pre-commit run --all-files` always runs with `HEAD` on `main`). Branch
+  protection on GitHub remains the gate against direct pushes to `main`.
+- `pre-commit run --all-files` consolidated into the `Required Checks / lint` job (with a
+  `~/.cache/pre-commit` cache keyed on `.pre-commit-config.yaml`) and removed from the
+  duplicate step in `ci.yml`.
 
 ## [0.1.0] - 2026-04-03
 
