@@ -217,6 +217,7 @@ class TestLifespanShutdown:
     ) -> None:
         """Lifespan teardown waits until _inflight reaches 0 before disconnecting."""
         import hermes.server as srv
+        from hermes.server import app
         from hermes.config import Settings
 
         monkeypatch.setenv("SHUTDOWN_TIMEOUT", "2.0")
@@ -227,10 +228,11 @@ class TestLifespanShutdown:
         # Simulate one in-flight request that resolves quickly
         srv._shutdown_event = asyncio.Event()
         srv._inflight = 1
+        app.state.inflight_lock = asyncio.Lock()
 
         async def _clear_inflight_soon() -> None:
             await asyncio.sleep(0.2)
-            async with srv._inflight_lock:
+            async with app.state.inflight_lock:
                 srv._inflight = 0
 
         task = asyncio.create_task(_clear_inflight_soon())
@@ -239,7 +241,7 @@ class TestLifespanShutdown:
         disconnect_called_at_inflight: list[int] = []
 
         async def _tracked_disconnect(**kwargs: object) -> None:
-            async with srv._inflight_lock:
+            async with app.state.inflight_lock:
                 disconnect_called_at_inflight.append(srv._inflight)
 
         mock_pub.disconnect = _tracked_disconnect
@@ -249,7 +251,7 @@ class TestLifespanShutdown:
         poll_interval = 0.05
         elapsed = 0.0
         while elapsed < deadline:
-            async with srv._inflight_lock:
+            async with app.state.inflight_lock:
                 remaining = srv._inflight
             if remaining == 0:
                 break
@@ -266,6 +268,7 @@ class TestLifespanShutdown:
     async def test_shutdown_proceeds_after_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Lifespan teardown proceeds with disconnect even if inflight never clears."""
         import hermes.server as srv
+        from hermes.server import app
         from hermes.config import Settings
 
         monkeypatch.setenv("SHUTDOWN_TIMEOUT", "0.3")
@@ -273,6 +276,7 @@ class TestLifespanShutdown:
 
         srv._shutdown_event = asyncio.Event()
         srv._inflight = 5  # stuck requests
+        app.state.inflight_lock = asyncio.Lock()
 
         disconnect_called = False
 
@@ -285,7 +289,7 @@ class TestLifespanShutdown:
         poll_interval = 0.05
         elapsed = 0.0
         while elapsed < deadline:
-            async with srv._inflight_lock:
+            async with app.state.inflight_lock:
                 remaining = srv._inflight
             if remaining == 0:
                 break
@@ -296,7 +300,7 @@ class TestLifespanShutdown:
 
         assert disconnect_called
         # _inflight never reached 0 — stuck at 5
-        async with srv._inflight_lock:
+        async with app.state.inflight_lock:
             assert srv._inflight == 5
 
         # Reset inflight for subsequent tests
