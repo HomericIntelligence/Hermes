@@ -194,3 +194,53 @@ class TestWebhookRateLimit:
 
         with pytest.raises(ValidationError):
             Settings()
+
+
+class TestSubjectsRateLimit:
+    def test_default_subjects_rate_limit_is_valid(self) -> None:
+        from hermes.config import Settings
+
+        s = Settings(_env_file=None)
+        assert s.subjects_rate_limit == "60/minute"
+
+    def test_subjects_rate_limit_rejects_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SUBJECTS_RATE_LIMIT", "not-valid")
+        from hermes.config import Settings
+
+        with pytest.raises(ValidationError):
+            Settings()
+
+    def test_subjects_rate_limit_accepts_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SUBJECTS_RATE_LIMIT", "50/minute")
+        from hermes.config import Settings
+
+        s = Settings()
+        assert s.subjects_rate_limit == "50/minute"
+
+    def test_subjects_rate_limit_accepts_per_second(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SUBJECTS_RATE_LIMIT", "10/second")
+        from hermes.config import Settings
+
+        s = Settings()
+        assert s.subjects_rate_limit == "10/second"
+
+    def test_subjects_rate_limit_accepts_per_hour(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SUBJECTS_RATE_LIMIT", "1000/hour")
+        from hermes.config import Settings
+
+        s = Settings()
+        assert s.subjects_rate_limit == "1000/hour"
+
+    def test_subjects_rate_limit_rejects_missing_period(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SUBJECTS_RATE_LIMIT", "100")
+        from hermes.config import Settings
+
+        with pytest.raises(ValidationError):
+            Settings()
+
+    def test_subjects_rate_limit_rejects_invalid_period(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SUBJECTS_RATE_LIMIT", "100/week")
+        from hermes.config import Settings
+
+        with pytest.raises(ValidationError):
+            Settings()

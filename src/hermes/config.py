@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     active_subjects_max: int = 1000
     webhook_rate_limit: str = "60/minute"
     webhook_rate_limit_key: str = "ip"
+    subjects_rate_limit: str = "60/minute"
     publish_retries: int = Field(default=3, ge=1)
     publish_retry_base_delay: float = Field(default=0.1, gt=0)
     nats_reconnect_interval: float = Field(default=5.0, gt=0)
@@ -84,11 +85,11 @@ class Settings(BaseSettings):
             return v
         raise ValueError(f"HERMES_HOST must be a valid IP or hostname, got: {v!r}")
 
-    @field_validator("webhook_rate_limit")
+    @field_validator("webhook_rate_limit", "subjects_rate_limit")
     @classmethod
     def _validate_rate_limit(cls, v: str) -> str:
         if not re.match(r"^\d+\s*/\s*(second|minute|hour|day)$", v):
-            raise ValueError(f"WEBHOOK_RATE_LIMIT must be like '100/minute', got: {v!r}")
+            raise ValueError(f"Rate limit must be like '100/minute', got: {v!r}")
         return v
 
     @field_validator("webhook_secret")
