@@ -998,9 +998,10 @@ class TestUnknownEventType:
     """Tests for #125: unknown event types return 422 when dead-lettering is disabled."""
 
     def _build_client_with_unknown_event(self, event: str) -> TestClient:
+        from hermes.config import get_settings
         from hermes.publisher import UnknownEventTypeError, Publisher
+        from hermes.rate_limit import limiter
         from hermes.server import app
-        from hermes.config import settings
 
         mock_publisher = MagicMock(spec=Publisher)
         mock_publisher.is_connected = True
@@ -1008,7 +1009,11 @@ class TestUnknownEventType:
         mock_publisher.publish = AsyncMock(side_effect=UnknownEventTypeError(event))
 
         app.state.publisher = mock_publisher
-        settings.webhook_secret = ""
+        # Disable HMAC signature validation by clearing the cached Settings secret.
+        # The /webhook handler uses Depends(get_settings), which returns the
+        # lru_cache'd singleton; mutating it here propagates into the request.
+        get_settings().webhook_secret = ""
+        limiter._storage.reset()  # type: ignore[attr-defined]
         return TestClient(app, raise_server_exceptions=True)
 
     def test_unknown_event_type_raises_422(self) -> None:
