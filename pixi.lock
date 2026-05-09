@@ -58,7 +58,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f2/94/a2025fe442abedf8b038038dab3dba942009ad42b38ea064a1a9e6094241/librt-0.9.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/af/40/791891d4c0c4dab4c5e187c17261cedc26285fd41541577f900470a45a4d/license_expression-30.4.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b3/5d/150c6f0b3a9e20acd785a6f27e1b2959b136483d39b2ac0a6ae87d3b3f92/limits-3.14.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b9/98/cb5ca20618d205a09d5bec7591fbc4130369c7e6308d9a676a28ff3ab22c/limits-5.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/94/54/e7d793b573f298e1c9013b8c4dade17d481164aa517d1d7148619c2cedbf/markdown_it_py-4.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/40/dc34d1a8d5f1e51fc64640b62b191684da52ca469da9cd74e84936ffa4a6/msgpack-1.1.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -151,7 +151,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6a/64/7165e08108cc185a13a9c069f0685e6ef92e70e07fddf7edf5e7348c6316/librt-0.10.0-cp314-cp314-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/af/40/791891d4c0c4dab4c5e187c17261cedc26285fd41541577f900470a45a4d/license_expression-30.4.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b3/5d/150c6f0b3a9e20acd785a6f27e1b2959b136483d39b2ac0a6ae87d3b3f92/limits-3.14.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b9/98/cb5ca20618d205a09d5bec7591fbc4130369c7e6308d9a676a28ff3ab22c/limits-5.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/71/201105712d0a2ff07b7873ed3c220292fb2ea5120603c00c4b634bcdafb3/msgpack-1.1.2-cp314-cp314-macosx_10_13_x86_64.whl
@@ -243,7 +243,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ae/ef/bf8613febf651b90c5222ee79dea5ae58d4cc2b544df69d3033424448934/librt-0.10.0-cp314-cp314-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/af/40/791891d4c0c4dab4c5e187c17261cedc26285fd41541577f900470a45a4d/license_expression-30.4.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b3/5d/150c6f0b3a9e20acd785a6f27e1b2959b136483d39b2ac0a6ae87d3b3f92/limits-3.14.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b9/98/cb5ca20618d205a09d5bec7591fbc4130369c7e6308d9a676a28ff3ab22c/limits-5.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1b/9f/38ff9e57a2eade7bf9dfee5eae17f39fc0e998658050279cbb14d97d36d9/msgpack-1.1.2-cp314-cp314-macosx_11_0_arm64.whl
@@ -543,7 +543,7 @@ packages:
 - pypi: ./
   name: hermes
   version: 0.1.0
-  sha256: be94a9418a51558f320484e764576a62139ec0fef9bfd0a930637ba51ef59dc4
+  sha256: 6c29f156f29c53c9497b8eee2797ea0ecccefbc55b3abce5e2ecb1fd92d0058c
   requires_dist:
   - fastapi>=0.115,<1
   - uvicorn[standard]>=0.30,<1
@@ -552,7 +552,7 @@ packages:
   - pydantic-settings>=2.14.0,<3
   - httpx>=0.27,<1
   - slowapi>=0.1.9,<1
-  - limits>=3.0,<4
+  - limits>=5.8.0,<6
   - prometheus-client>=0.25.0,<1
   requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl
@@ -974,35 +974,24 @@ packages:
   - sphinx-rtd-dark-mode>=1.3.0 ; extra == 'dev'
   - sphinx-copybutton ; extra == 'dev'
   requires_python: '>=3.9'
-- pypi: https://files.pythonhosted.org/packages/b3/5d/150c6f0b3a9e20acd785a6f27e1b2959b136483d39b2ac0a6ae87d3b3f92/limits-3.14.1-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/b9/98/cb5ca20618d205a09d5bec7591fbc4130369c7e6308d9a676a28ff3ab22c/limits-5.8.0-py3-none-any.whl
   name: limits
-  version: 3.14.1
-  sha256: 051aca02da56e6932599a25cb8e70543959294f5d587d57bcd7e38df234e697b
+  version: 5.8.0
+  sha256: ae1b008a43eb43073c3c579398bd4eb4c795de60952532dc24720ab45e1ac6b8
   requires_dist:
   - deprecated>=1.2
-  - packaging>=21,<25
+  - packaging>=21
   - typing-extensions
-  - redis>3,!=4.5.2,!=4.5.3,<6.0.0 ; extra == 'all'
-  - redis>=4.2.0,!=4.5.2,!=4.5.3 ; extra == 'all'
-  - pymemcache>3,<5.0.0 ; extra == 'all'
-  - pymongo>4.1,<5 ; extra == 'all'
-  - etcd3 ; extra == 'all'
-  - coredis>=3.4.0,<5 ; extra == 'all'
-  - motor>=3,<4 ; extra == 'all'
-  - aetcd ; extra == 'all'
-  - emcache>=0.6.1 ; python_full_version < '3.11' and extra == 'all'
-  - emcache>=1 ; python_full_version >= '3.11' and python_full_version < '3.13' and extra == 'all'
-  - aetcd ; extra == 'async-etcd'
-  - emcache>=0.6.1 ; python_full_version < '3.11' and extra == 'async-memcached'
-  - emcache>=1 ; python_full_version >= '3.11' and python_full_version < '3.13' and extra == 'async-memcached'
+  - memcachio>=0.3 ; extra == 'async-memcached'
   - motor>=3,<4 ; extra == 'async-mongodb'
-  - coredis>=3.4.0,<5 ; extra == 'async-redis'
-  - etcd3 ; extra == 'etcd'
+  - coredis>=3.4.0,<6 ; extra == 'async-redis'
+  - valkey>=6 ; extra == 'async-valkey'
   - pymemcache>3,<5.0.0 ; extra == 'memcached'
   - pymongo>4.1,<5 ; extra == 'mongodb'
-  - redis>3,!=4.5.2,!=4.5.3,<6.0.0 ; extra == 'redis'
+  - redis>3,!=4.5.2,!=4.5.3,<8.0.0 ; extra == 'redis'
   - redis>=4.2.0,!=4.5.2,!=4.5.3 ; extra == 'rediscluster'
-  requires_python: '>=3.9'
+  - valkey>=6 ; extra == 'valkey'
+  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/94/54/e7d793b573f298e1c9013b8c4dade17d481164aa517d1d7148619c2cedbf/markdown_it_py-4.0.0-py3-none-any.whl
   name: markdown-it-py
   version: 4.0.0
