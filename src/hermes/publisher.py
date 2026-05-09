@@ -177,7 +177,7 @@ class Publisher:
             (
                 "homeric-deadletter",
                 ["hi.deadletter.>"],
-                {"max_age": dead_letter_ttl} if dead_letter_ttl is not None else {},
+                {"max_age": dead_letter_ttl.total_seconds()} if dead_letter_ttl is not None else {},
             ),
         ]
 
