@@ -83,6 +83,7 @@ Every message published to NATS JetStream includes a `schema_version` integer fi
 | DEAD_LETTER_API_KEY   |                                | API key for GET/DELETE /dead-letters (min 32 chars; auth bypassed when unset) |
 | SHUTDOWN_TIMEOUT      | 10.0                           | Graceful shutdown timeout in seconds                    |
 | WEBHOOK_RATE_LIMIT    | 60/minute                      | Rate limit for POST /webhook endpoint                   |
+| WEBHOOK_RATE_LIMIT_KEY | ip                            | Rate-limit key strategy: `ip` (only currently wired) or `endpoint` (reserved) |
 | SUBJECTS_RATE_LIMIT   | 60/minute                      | Rate limit for GET /subjects endpoint                   |
 | ENABLE_DEAD_LETTER    | true                           | Route unparseable / unknown events to `hi.deadletter.>` |
 | DEAD_LETTER_MAX_SIZE  | 1000                           | Maximum entries kept in the in-memory dead-letter queue |
