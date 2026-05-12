@@ -82,6 +82,12 @@ Every message published to NATS JetStream includes a `schema_version` integer fi
 | SHUTDOWN_TIMEOUT      | 10.0                           | Graceful shutdown timeout in seconds                    |
 | WEBHOOK_RATE_LIMIT    | 60/minute                      | Rate limit for POST /webhook endpoint                   |
 | SUBJECTS_RATE_LIMIT   | 60/minute                      | Rate limit for GET /subjects endpoint                   |
+| ENABLE_DEAD_LETTER    | true                           | Route unparseable / unknown events to `hi.deadletter.>` |
+| DEAD_LETTER_MAX_SIZE  | 1000                           | Maximum entries kept in the in-memory dead-letter queue |
+| DEAD_LETTER_TTL_SECONDS | 86400                        | TTL applied to the JetStream `homeric-deadletter` stream (0 = no expiry) |
+| DEAD_LETTER_ALERT_THRESHOLD | 0.8                      | Fraction of `DEAD_LETTER_MAX_SIZE` at which a queue-pressure alert is logged |
+| DEAD_LETTER_PAGE_SIZE_DEFAULT | 100                    | Default page size for `GET /dead-letters`               |
+| DEAD_LETTER_PAGE_SIZE_MAX | 500                        | Maximum allowed page size for `GET /dead-letters`       |
 
 Configure external services to POST to `http://<hermes-host>:<HERMES_PORT>/webhook`.
 
