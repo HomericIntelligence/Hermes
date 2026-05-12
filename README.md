@@ -181,12 +181,18 @@ cp .env.example .env
 
 ### NATS Reconnection
 
-Hermes connects to NATS with the following behavior:
+Hermes connects to NATS with the following behavior (see
+[ADR-001](docs/adr/ADR-001-nats-reconnect-strategy.md) for the rationale):
 
 - **Initial connection:** Uses `NATS_CONNECT_TIMEOUT` to establish the first connection to the
   NATS server.
-- **Automatic reconnection:** When an established connection drops, nats-py automatically attempts
-  to reconnect according to its internal backoff strategy.
+- **Fail-fast on disconnect:** Hermes calls `nats.connect(allow_reconnect=False)` so the nats-py
+  client never silently buffers messages while disconnected. A dropped connection is reflected
+  immediately on `/health` and `/ready` (both return `503`) and `POST /webhook` returns `503`
+  rather than acknowledging events that were never durably published.
+- **External reconnect loop:** A background task retries the connection every
+  `NATS_RECONNECT_INTERVAL` seconds with a `NATS_RECONNECT_HARD_TIMEOUT` per attempt; until a
+  reconnect succeeds the service stays unhealthy.
 - **Publish timeout:** Messages published to JetStream have a per-operation timeout of
   `NATS_PUBLISH_TIMEOUT`, ensuring pub/sub calls don't hang indefinitely.
 - **Connection lifecycle:** Use `SHUTDOWN_TIMEOUT` to allow graceful in-flight request completion
