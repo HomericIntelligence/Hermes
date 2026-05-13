@@ -39,12 +39,6 @@ def _sign(body: bytes) -> str:
 # ---------------------------------------------------------------------------
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Skip all integration tests if NATS is unreachable."""
-    # Evaluated lazily at collection time via a custom marker skip mechanism
-    pass
-
-
 @pytest.fixture(scope="module", autouse=True)
 def require_nats() -> None:  # type: ignore[return]
     """Skip the entire module when NATS is not reachable."""
