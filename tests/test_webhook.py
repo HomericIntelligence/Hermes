@@ -185,6 +185,12 @@ class TestHealthEndpoint:
         mock_publisher.dead_letter_count = 42
         mock_publisher.reconnect_count = 0
         mock_publisher.last_error = ""
+        # PR #627: HealthResponse now surfaces reconnect-loop state (issue #528).
+        # ``MagicMock(spec=Publisher)`` does not see instance attributes set in
+        # ``__init__``, so we must set them explicitly here.
+        mock_publisher.last_reconnect_attempt_at = None
+        mock_publisher.consecutive_reconnect_failures = 0
+        mock_publisher.reconnect_loop_running = False
         mock_publisher.publish = AsyncMock()
         app.state.publisher = mock_publisher
 
