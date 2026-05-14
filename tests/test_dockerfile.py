@@ -85,10 +85,27 @@ def test_dockerfile_no_bare_unversioned_pip_packages() -> None:
         # If the line uses tomllib substitution, it's acceptable — deps come from pyproject.toml
         if "tomllib" in line or "$(" in line:
             continue
-        # Otherwise, extract package tokens and assert each has a version spec
+        # Otherwise, extract package tokens and assert each has a version spec.
+        # Skip flags, common command words, shell separators, and the value
+        # following pip's file/constraint/requirements flags (-r/-c/--requirement/
+        # --constraint) since that token is a filename, not a package.
         tokens = line.split()
+        _SHELL_SEPARATORS = {"&&", "||", ";", "|", "&"}
+        _CMD_WORDS = {"pip", "install", "run", "RUN", "python3", "python", "\\"}
+        _FILE_FLAGS = {"-r", "-c", "--requirement", "--constraint", "-t", "--target", "--prefix", "--root", "--cache-dir", "--index-url", "--extra-index-url", "--find-links", "-f"}
+        skip_next = False
         for token in tokens:
-            if token.startswith("-") or token in ("pip", "install", "run", "RUN", "python3", "\\"):
+            if skip_next:
+                skip_next = False
+                continue
+            if token in _FILE_FLAGS:
+                skip_next = True
+                continue
+            if token.startswith("--requirement=") or token.startswith("--constraint="):
+                continue
+            if token.startswith("-"):
+                continue
+            if token in _CMD_WORDS or token in _SHELL_SEPARATORS:
                 continue
             # A bare package name with no specifier is a violation
             base = re.sub(r"\[.*?\]", "", token)
