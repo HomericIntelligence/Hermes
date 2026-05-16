@@ -454,14 +454,7 @@
             "default": 0.0
           },
           "timeouts": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TimeoutSettings"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/TimeoutSettings"
           },
           "nats_reconnect_count": {
             "type": "integer",
@@ -487,7 +480,8 @@
         "type": "object",
         "required": [
           "status",
-          "nats_connected"
+          "nats_connected",
+          "timeouts"
         ],
         "title": "HealthResponse",
         "description": "Response body for GET /health."
