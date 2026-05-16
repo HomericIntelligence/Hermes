@@ -67,7 +67,7 @@ class HealthResponse(BaseModel):
     dead_letter_queue_depth: int = 0
     dead_letter_queue_capacity: int = 0
     dead_letter_queue_alert_threshold_pct: float = 0.0
-    timeouts: TimeoutSettings | None = None
+    timeouts: TimeoutSettings
     nats_reconnect_count: int = 0
     nats_last_error: str = ""
     nats_retry_attempts: int = 3
