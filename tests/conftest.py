@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import os
 from collections.abc import AsyncGenerator, Generator
-from datetime import datetime, timezone
 
 import nats
 import pytest
@@ -15,8 +14,7 @@ import hermes.server as _server
 from hermes.config import get_settings
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher
-
-_FIXED_TS = datetime(2026, 4, 22, tzinfo=timezone.utc)
+from tests.helpers import FIXED_TS as _FIXED_TS
 
 
 @pytest.fixture(autouse=True)

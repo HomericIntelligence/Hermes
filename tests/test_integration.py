@@ -11,8 +11,6 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timezone
-
 import nats
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -20,18 +18,16 @@ from httpx import ASGITransport, AsyncClient
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher
 
-from tests.helpers import sign_body
-
-_FIXED_TS = datetime(2026, 4, 22, tzinfo=timezone.utc)
+from tests.helpers import FIXED_TS as _FIXED_TS, sign_body
 
 pytestmark = pytest.mark.integration
 
 _NATS_URL = os.environ.get("TEST_NATS_URL", "nats://localhost:4222")
-_TEST_SECRET = "integration-test-secret-for-hermes-webhook"
+INTEGRATION_TEST_SECRET = "integration-test-secret-for-hermes-webhook"
 
 
 def _sign(body: bytes) -> str:
-    return sign_body(body, _TEST_SECRET)
+    return sign_body(body, INTEGRATION_TEST_SECRET)
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +165,7 @@ class TestWebhookIntegration:
         """POST /webhook with a valid payload results in a NATS message being delivered."""
         from hermes.server import app
 
-        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
+        monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
         monkeypatch.setenv("NATS_URL", nats_url)
 
         received: list[nats.aio.msg.Msg] = []
@@ -218,7 +214,7 @@ class TestWebhookIntegration:
         """POST /webhook returns 503 when the publisher is not connected."""
         from hermes.server import app
 
-        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
+        monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
 
         disconnected = Publisher()  # never connected
         app.state.publisher = disconnected
@@ -1042,7 +1038,7 @@ class TestRequestIdInNats:
         from hermes.server import app
 
         my_request_id = "test-req-id-231"
-        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
+        monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
         monkeypatch.setenv("NATS_URL", nats_url)
 
         received: list[nats.aio.msg.Msg] = []
@@ -1146,7 +1142,7 @@ class TestJetStreamAck:
         """POST /webhook → HMAC check → Publisher.publish → JetStream ACK succeeds."""
         from hermes.server import app
 
-        monkeypatch.setenv("WEBHOOK_SECRET", _TEST_SECRET)
+        monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
         monkeypatch.setenv("NATS_URL", nats_url)
 
         js = nats_client.jetstream()
