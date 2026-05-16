@@ -20,7 +20,7 @@ classifiers = [
 # pixi.toml [pypi-dependencies] is the authoritative source — keep these ranges in sync.
 # scripts/check_dep_sync.py enforces parity between this list and pixi.toml in CI.
 dependencies = [
-    "fastapi>=0.115,<1",
+    "fastapi>=0.136.1,<1",
     # Pin starlette<1.0 — starlette 1.0.0 has a BaseHTTPMiddleware regression that
     # raises `RuntimeError: Response content longer than Content-Length` when the
     # streaming-response wrapper re-emits a body whose Content-Length was already
