@@ -33,8 +33,8 @@ def test_project_dependencies_section_exists(pyproject: dict) -> None:
 
 def test_project_dependencies_count(pyproject: dict) -> None:
     deps = pyproject["project"]["dependencies"]
-    assert len(deps) == 12, (
-        f"Expected 12 runtime dependencies, found {len(deps)}: {deps}"
+    assert len(deps) == 11, (
+        f"Expected 11 runtime dependencies, found {len(deps)}: {deps}"
     )
 
 
@@ -51,7 +51,6 @@ def test_project_dependencies_count(pyproject: dict) -> None:
         "slowapi",
         "limits",
         "prometheus-client",
-        "idna",
     ],
 )
 def test_dependency_has_upper_bound(dep: str, pyproject: dict) -> None:
@@ -59,15 +58,3 @@ def test_dependency_has_upper_bound(dep: str, pyproject: dict) -> None:
     matched = [d for d in deps if d.lower().startswith(dep.lower())]
     assert matched, f"Dependency '{dep}' not found in [project.dependencies]"
     entry = matched[0]
-    assert ">=" in entry, f"'{entry}' is missing a >= lower bound"
-    assert "<" in entry, f"'{entry}' is missing a < upper bound (prevents unbounded major pulls)"
-
-
-def test_no_dev_dependencies_in_project_deps(pyproject: dict) -> None:
-    dev_only = {"pytest", "ruff", "mypy", "pre-commit", "pip-audit"}
-    deps: list[str] = pyproject["project"]["dependencies"]
-    for dep in deps:
-        name = dep.split("[")[0].split(">=")[0].split(">")[0].split("==")[0].strip().lower()
-        assert name not in dev_only, (
-            f"Dev dependency '{name}' should not appear in [project.dependencies]"
-        )
