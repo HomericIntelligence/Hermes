@@ -7,7 +7,6 @@ import signal
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
 
 
 # ---------------------------------------------------------------------------
@@ -29,15 +28,6 @@ def _make_mock_publisher(*, connected: bool = True) -> MagicMock:
     mock.consecutive_reconnect_failures = 0
     mock.reconnect_loop_running = False
     return mock
-
-
-def _build_client(publisher: MagicMock | None = None) -> TestClient:
-    from hermes.server import app
-
-    if publisher is None:
-        publisher = _make_mock_publisher()
-    app.state.publisher = publisher
-    return TestClient(app, raise_server_exceptions=True)
 
 
 # ---------------------------------------------------------------------------
@@ -94,26 +84,26 @@ class TestPublisherDisconnect:
 
 
 class TestHealthShuttingDown:
-    def test_health_includes_shutting_down_field(self) -> None:
-        client = _build_client()
+    def test_health_includes_shutting_down_field(self, make_test_client) -> None:
+        client = make_test_client(webhook_secret=None)
         body = client.get("/health").json()
         assert "shutting_down" in body
 
-    def test_health_shutting_down_false_normally(self) -> None:
+    def test_health_shutting_down_false_normally(self, make_test_client) -> None:
         import hermes.server as srv
 
         srv._shutdown_event = asyncio.Event()
-        client = _build_client()
+        client = make_test_client(webhook_secret=None)
         body = client.get("/health").json()
         assert body["shutting_down"] is False
 
-    def test_health_shutting_down_true_when_event_set(self) -> None:
+    def test_health_shutting_down_true_when_event_set(self, make_test_client) -> None:
         import hermes.server as srv
 
         srv._shutdown_event = asyncio.Event()
         srv._shutdown_event.set()
         try:
-            client = _build_client()
+            client = make_test_client(webhook_secret=None)
             body = client.get("/health").json()
             assert body["shutting_down"] is True
         finally:
@@ -126,14 +116,14 @@ class TestHealthShuttingDown:
 
 
 class TestShutdownMiddleware:
-    def test_webhook_rejected_503_during_shutdown(self) -> None:
+    def test_webhook_rejected_503_during_shutdown(self, make_test_client) -> None:
         import hermes.server as srv
 
         srv._shutdown_event = asyncio.Event()
         srv._shutdown_event.set()
         try:
             # webhook_secret="" is the default; no env override needed
-            client = _build_client()
+            client = make_test_client(webhook_secret=None)
             response = client.post(
                 "/webhook",
                 json={
@@ -146,15 +136,12 @@ class TestShutdownMiddleware:
         finally:
             srv._shutdown_event = asyncio.Event()
 
-    def test_webhook_accepted_when_not_shutting_down(self) -> None:
+    def test_webhook_accepted_when_not_shutting_down(self, make_test_client) -> None:
         import hermes.server as srv
-        from hermes.config import Settings, get_settings
-        from hermes.server import app
 
         srv._shutdown_event = asyncio.Event()
         # Disable HMAC validation so the test works regardless of .env contents
-        app.dependency_overrides[get_settings] = lambda: Settings(webhook_secret="")
-        client = _build_client()
+        client = make_test_client(webhook_secret="")
         response = client.post(
             "/webhook",
             json={
@@ -166,13 +153,13 @@ class TestShutdownMiddleware:
         # 202 means the request was processed (NATS publish is mocked)
         assert response.status_code == 202
 
-    def test_health_allowed_during_shutdown(self) -> None:
+    def test_health_allowed_during_shutdown(self, make_test_client) -> None:
         import hermes.server as srv
 
         srv._shutdown_event = asyncio.Event()
         srv._shutdown_event.set()
         try:
-            client = _build_client()
+            client = make_test_client(webhook_secret=None)
             response = client.get("/health")
             assert response.status_code == 200
         finally:
@@ -354,13 +341,11 @@ class TestInflightCounter:
         async with srv._inflight_lock:
             assert srv._inflight == 0
 
-    def test_webhook_post_resets_inflight_to_zero_after_success(self) -> None:
+    def test_webhook_post_resets_inflight_to_zero_after_success(self, make_test_client) -> None:
         """After a successful webhook POST, _inflight returns to 0."""
         import hermes.server as srv
-        from hermes.config import get_settings
 
-        get_settings().webhook_secret = ""
-        client = _build_client()
+        client = make_test_client(webhook_secret="")
         assert srv._inflight == 0
         response = client.post(
             "/webhook",
@@ -373,15 +358,15 @@ class TestInflightCounter:
         assert response.status_code == 202
         assert srv._inflight == 0
 
-    def test_webhook_post_resets_inflight_to_zero_on_publish_failure(self) -> None:
+    def test_webhook_post_resets_inflight_to_zero_on_publish_failure(
+        self, make_test_client
+    ) -> None:
         """After a failed publish, _inflight returns to 0."""
         import hermes.server as srv
-        from hermes.config import get_settings
 
-        get_settings().webhook_secret = ""
         mock_pub = _make_mock_publisher()
         mock_pub.publish = AsyncMock(side_effect=asyncio.TimeoutError())
-        client = _build_client(mock_pub)
+        client = make_test_client(publisher=mock_pub, webhook_secret="")
         assert srv._inflight == 0
         response = client.post(
             "/webhook",
@@ -394,11 +379,11 @@ class TestInflightCounter:
         assert response.status_code == 503
         assert srv._inflight == 0
 
-    def test_health_inflight_requests_reflects_module_counter(self) -> None:
+    def test_health_inflight_requests_reflects_module_counter(self, make_test_client) -> None:
         """The /health endpoint reports whatever _inflight is set to."""
         import hermes.server as srv
 
         srv._inflight = 3
-        client = _build_client()
+        client = make_test_client(webhook_secret=None)
         body = client.get("/health").json()
         assert body["inflight_requests"] == 3
