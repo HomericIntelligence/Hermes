@@ -1138,7 +1138,6 @@ class TestJetStreamAck:
         try:
             sub = await js.pull_subscribe(
                 "hi.agents.js-ack-host.js-ack-agent.created",
-                durable="test-ack-consumer-221",
                 stream="homeric-agents",
             )
 
