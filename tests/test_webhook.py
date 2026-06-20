@@ -72,7 +72,6 @@ class TestHealthEndpoint:
 
     def test_health_dead_letter_count_reflects_publisher(self, make_test_client) -> None:
         from hermes.publisher import Publisher
-        from hermes.server import app
 
         mock_publisher = MagicMock(spec=Publisher)
         mock_publisher.is_connected = True
@@ -84,7 +83,6 @@ class TestHealthEndpoint:
         mock_publisher.consecutive_reconnect_failures = 0
         mock_publisher.reconnect_loop_running = False
         mock_publisher.publish = AsyncMock()
-        app.state.publisher = mock_publisher
 
         client = make_test_client(publisher=mock_publisher, reset_rate_limiter=False)
         body = client.get("/health").json()
@@ -129,7 +127,6 @@ class TestHealthEndpoint:
     def test_health_includes_dead_letter_queue_depth_gauge(self, make_test_client) -> None:
         """Issue #531: surface dead_letter_queue_depth gauge in /health."""
         from hermes.publisher import Publisher
-        from hermes.server import app
 
         mock_publisher = MagicMock(spec=Publisher)
         mock_publisher.is_connected = True
@@ -144,7 +141,6 @@ class TestHealthEndpoint:
         mock_publisher.consecutive_reconnect_failures = 0
         mock_publisher.reconnect_loop_running = False
         mock_publisher.publish = AsyncMock()
-        app.state.publisher = mock_publisher
 
         client = make_test_client(publisher=mock_publisher, reset_rate_limiter=False)
         body = client.get("/health").json()
