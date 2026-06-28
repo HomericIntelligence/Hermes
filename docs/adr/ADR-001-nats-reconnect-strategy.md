@@ -1,6 +1,6 @@
 # ADR-001: NATS Reconnect Strategy
 
-**Status:** Accepted
+**Status:** Amended — see ADR-004
 **Date:** 2024-01-15
 **Deciders:** Hermes maintainers
 
@@ -62,7 +62,7 @@ Once the service is running, a NATS disconnect causes:
 - The `nats.connect()` flag `allow_reconnect=False` is preserved to keep the false-ACK
   protections described above. Runtime self-healing is delegated to an in-process
   Hermes-owned reconnect loop (`Publisher._reconnect_loop`) introduced after this ADR;
-  see **ADR-002** for the loop's design, backoff parameters, settings, and metric
+  see **ADR-004** for the loop's design, backoff parameters, settings, and metric
   ownership.
 - Upstream callers must still implement retry logic with backoff: while a reconnect is
   in flight, `POST /webhook` returns `503` because the publisher reports
@@ -85,7 +85,7 @@ Once the service is running, a NATS disconnect causes:
 
 ## Document Metadata
 
-**Status:** Amended — the runtime-reconnect consequence is superseded by ADR-002.
+**Status:** Amended — the runtime-reconnect consequence is superseded by ADR-004.
 **Supersedes:** N/A
-**Superseded by:** ADR-002 (runtime-reconnect portion only; the
+**Superseded by:** ADR-004 (runtime-reconnect portion only; the
 `allow_reconnect=False` decision and Rationale sections of ADR-001 remain in force).

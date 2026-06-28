@@ -34,6 +34,7 @@ ADRs are append-mostly: once Accepted, the body is **not** rewritten. To change 
 
 | #                                             | Title                                        | Status   | Date       |
 |-----------------------------------------------|----------------------------------------------|----------|------------|
-| [ADR-001](ADR-001-nats-reconnect-strategy.md) | NATS Reconnect Strategy                      | Accepted | 2024-01-15 |
+| [ADR-001](ADR-001-nats-reconnect-strategy.md) | NATS Reconnect Strategy                      | Amended  | 2024-01-15 |
 | [ADR-002](ADR-002-dead-letter-strategy.md)    | Dead-Letter Strategy for Unknown Event Types | Accepted | 2024-01-15 |
 | [ADR-003](ADR-003-schema-version-field.md)    | Wire Format Schema Versioning                | Accepted | 2024-01-15 |
+| [ADR-004](ADR-004-nats-runtime-reconnect-loop.md) | NATS Runtime Reconnect Loop | Accepted | 2026-06-03 |

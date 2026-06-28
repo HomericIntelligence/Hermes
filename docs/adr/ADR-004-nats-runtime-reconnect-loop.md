@@ -1,4 +1,4 @@
-# ADR-002: NATS Runtime Reconnect Loop
+# ADR-004: NATS Runtime Reconnect Loop
 
 **Status:** Accepted
 **Date:** 2026-06-03
