@@ -450,7 +450,6 @@ jobs:
             xargs check-jsonschema \
               --schemafile https://json.schemastore.org/github-workflow
 
-
   openapi-lint:
     # Spectral lint for openapi.json (issue #434). Mirrors the
     # `spectral-openapi` pre-commit hook so the rule is enforced both locally
