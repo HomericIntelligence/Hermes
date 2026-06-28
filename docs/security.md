@@ -50,7 +50,7 @@ Last verified: `2026-06-20` on Gitleaks `v8.30.1` against
 ```
 Finding:     stripe_api_key = sk_live_<EXAMPLE-24-CHARS>
 RuleID:      stripe-access-token
-Entropy:     4.793345
+Entropy:     4.687500
 File:        __secret_scan_tripwire__.txt
 leaks found: 1
 gitleaks exit code: 1
