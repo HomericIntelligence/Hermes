@@ -142,8 +142,9 @@ log collectors depend on. Callers that need stderr can pass
   ```
 
   This is enforced by `scripts/check-no-bare-crypto-in-tests.py`, wired
-  into pre-commit (`no-bare-crypto-in-tests`) and CI's `_required.yml`
-  lint job. The only file permitted to import `hmac`/`hashlib` is
+  into pre-commit (`no-bare-crypto-in-tests`) and enforced in CI via the
+  `pre-commit run --all-files` step in `_required.yml`. The only file
+  permitted to import `hmac`/`hashlib` is
   `tests/helpers.py` itself. Regression guard for #468 / follow-up #329.
 
 ## Future Integrations
