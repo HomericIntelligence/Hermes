@@ -461,9 +461,12 @@ class TestShutdownRaceCondition:
         must return 503 without calling publisher.publish, and _inflight must
         decrement back to 0 via the context manager's finally."""
         import hermes.server as srv
-        from hermes.config import get_settings
+        from hermes.config import Settings, get_settings
+        from hermes.server import app
 
-        get_settings().webhook_secret = ""
+        # Disable HMAC validation; Settings is frozen, so override the dependency
+        # rather than mutating the model in place.
+        app.dependency_overrides[get_settings] = lambda: Settings(webhook_secret="")
         monkeypatch.setattr(srv, "_inflight_context", _race_inflight_context)
 
         mock_pub = _make_mock_publisher()
@@ -488,9 +491,12 @@ class TestShutdownRaceCondition:
         """Sanity check: with shutdown unset, the handler succeeds end-to-end
         and the new post-increment guard does not regress the happy path."""
         import hermes.server as srv
-        from hermes.config import get_settings
+        from hermes.config import Settings, get_settings
+        from hermes.server import app
 
-        get_settings().webhook_secret = ""
+        # Disable HMAC validation; Settings is frozen, so override the dependency
+        # rather than mutating the model in place.
+        app.dependency_overrides[get_settings] = lambda: Settings(webhook_secret="")
         mock_pub = _make_mock_publisher()
         client = _build_client(mock_pub)
 
