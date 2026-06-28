@@ -101,6 +101,17 @@ smoke-readonly-fs:
 export-openapi:
     pixi run python scripts/export-openapi.py
 
+# === Requirements ===
+
+# Regenerate requirements.txt from pixi.lock (run after `pixi update`)
+# Enforced in CI by the docker-deps job in .github/workflows/_required.yml (see #556).
+sync-reqs:
+    pixi run python scripts/sync_requirements.py
+
+# Validate requirements.txt is in sync with pixi.lock (CI gate)
+check-reqs:
+    pixi run python scripts/sync_requirements.py --check
+
 # === Security ===
 
 # Audit dependencies for known vulnerabilities
