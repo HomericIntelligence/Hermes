@@ -44,19 +44,26 @@ def test_gitleaks_step_has_no_continue_on_error() -> None:
 
 
 def test_gitleaks_config_extends_default_rules() -> None:
-    """'.gitleaks.toml' must declare '[extend] useDefault = true'.
+    """'.gitleaks.toml' must declare 'useDefault = true' under the '[extend]' section.
 
     Without this stanza, a config file with only an [allowlist] section causes
     Gitleaks to load zero built-in rules — the gate passes silently even when
     real secrets are committed.  This was the root-cause bug found during the
     issue-#507 E2E verification.
+
+    The assertion is scoped so that 'useDefault = true' must appear inside the
+    '[extend]' table specifically (i.e. before the next TOML section header).
+    A 'useDefault = true' line under a different section (e.g. '[allowlist]')
+    would NOT enable the default ruleset and must not satisfy this test.
     """
     content = _GITLEAKS_CONFIG.read_text()
-    assert re.search(r"^\[extend\]", content, re.MULTILINE), (
-        ".gitleaks.toml must have an [extend] section."
-    )
-    assert re.search(r"^useDefault\s*=\s*true", content, re.MULTILINE), (
-        ".gitleaks.toml must set 'useDefault = true' under [extend] so that "
-        "Gitleaks loads its default ruleset.  Without this, the config replaces "
-        "all built-in rules and the gate never fires."
+    assert re.search(
+        r"^\[extend\][^\[]*?^useDefault\s*=\s*true",
+        content,
+        re.MULTILINE | re.DOTALL,
+    ), (
+        ".gitleaks.toml must set 'useDefault = true' directly under the [extend] "
+        "section so that Gitleaks loads its default ruleset.  Without this, the "
+        "config replaces all built-in rules and the gate never fires.  A "
+        "'useDefault = true' line under any other TOML section does not count."
     )
