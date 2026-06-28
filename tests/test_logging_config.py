@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import json
 import logging
+import sys
 
 from hermes.logging_config import JsonFormatter, setup_logging
 
@@ -185,3 +187,50 @@ class TestSetupLogging:
         self._clear_root_handlers()
         setup_logging(level=logging.DEBUG)
         assert logging.getLogger().level == logging.DEBUG
+
+
+class TestSetupLoggingStream:
+    """Regression coverage for issue #462: default destination must be stdout."""
+
+    def _clear_root_handlers(self) -> None:
+        root = logging.getLogger()
+        for h in list(root.handlers):
+            root.removeHandler(h)
+
+    def _stream_handler(self) -> logging.StreamHandler:
+        root = logging.getLogger()
+        return next(
+            h
+            for h in root.handlers
+            if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        )
+
+    def test_default_stream_is_stdout(self) -> None:
+        """Issue #462: bare setup_logging() must route to stdout, not stderr."""
+        self._clear_root_handlers()
+        setup_logging()
+        assert self._stream_handler().stream is sys.stdout
+
+    def test_explicit_stderr_is_honoured(self) -> None:
+        self._clear_root_handlers()
+        setup_logging(stream=sys.stderr)
+        assert self._stream_handler().stream is sys.stderr
+
+    def test_custom_stream_receives_records(self) -> None:
+        self._clear_root_handlers()
+        buf = io.StringIO()
+        setup_logging(stream=buf)
+        logging.getLogger().warning("hello-462")
+        assert "hello-462" in buf.getvalue()
+
+    def test_none_resolves_lazily(self) -> None:
+        """Passing stream=None must resolve sys.stdout at call time, not import time."""
+        self._clear_root_handlers()
+        sentinel = io.StringIO()
+        original = sys.stdout
+        try:
+            sys.stdout = sentinel
+            setup_logging(stream=None)
+            assert self._stream_handler().stream is sentinel
+        finally:
+            sys.stdout = original
