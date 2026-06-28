@@ -25,17 +25,23 @@ dependencies = [
     # that raised `RuntimeError: Response content longer than Content-Length` when
     # streaming-response wrapper re-emitted a body with Content-Length already set.
     # Fixed in 1.0.1. See readonly-fs-smoke failure on main, GH run 25840464800.
-    "starlette>=1.0.1,<2",
+    # Further bumped to >=1.3.1 to remediate PYSEC-2026-248 (fix 1.3.0) and
+    # PYSEC-2026-249 (fix 1.3.1), flagged by pip-audit / security/dependency-scan.
+    "starlette>=1.3.1,<2",
     "uvicorn[standard]>=0.47.0,<1",
     "nats-py>=2.14.0,<3",
     "pydantic>=2.13.4,<3",
-    "pydantic-settings>=2.14.1,<3",
+    # Bumped to >=2.14.2 to remediate GHSA-4xgf-cpjx-pc3j (pip-audit).
+    "pydantic-settings>=2.14.2,<3",
     "httpx>=0.28.1,<1",
     "slowapi>=0.1.9,<1",
     "limits>=5.8.0,<6",
     "prometheus-client>=0.20,<1",
     # Pinned to remediate CVE-2026-44431 / CVE-2026-44432 (transitive via cachecontrol/requests).
     "urllib3>=2.7.0,<3",
+    # Pinned to remediate GHSA-6v7p-g79w-8964 (transitive via cachecontrol, the
+    # same chain as urllib3 above). Fixed in 1.2.1. Flagged by security/dependency-scan.
+    "msgpack>=1.2.1,<2",
 ]
 
 # Mirror of pixi.toml [feature.dev.pypi-dependencies] so pip-based workflows
