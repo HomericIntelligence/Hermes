@@ -84,6 +84,6 @@ No runtime state, no data migration.
 
 - Issue #491, #336
 - `docker/build-push-action` attestation docs:
-  https://github.com/docker/build-push-action/blob/master/docs/advanced/attestations.md
-- SLSA specification: https://slsa.dev/spec/v1.0/
-- GitHub build attestations: https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds
+  <https://github.com/docker/build-push-action/blob/master/docs/advanced/attestations.md>
+- SLSA specification: <https://slsa.dev/spec/v1.0/>
+- GitHub build attestations: <https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds>
