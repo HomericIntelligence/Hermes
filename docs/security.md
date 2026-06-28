@@ -23,9 +23,10 @@ just verify-secret-scan       # or: bash scripts/verify-secret-scan.sh
 The script (`scripts/verify-secret-scan.sh`) creates a throwaway worktree,
 plants a synthetic Stripe-style live key in a top-level file
 `__secret_scan_tripwire__.txt` (outside the `tests/.*` allowlist in
-`.gitleaks.toml`), runs the same flags as the CI gate, and asserts a non-zero
-exit. The worktree and branch are discarded on exit; nothing persists in the
-repo.
+`.gitleaks.toml`), runs the same command flags as the CI gate but with the
+working-tree `.gitleaks.toml` (not the committed config at HEAD), and asserts
+a non-zero exit. This tests the fix even before it's committed. The worktree
+and branch are discarded on exit; nothing persists in the repo.
 
 ### Why the synthetic key is built at runtime, not stored here
 

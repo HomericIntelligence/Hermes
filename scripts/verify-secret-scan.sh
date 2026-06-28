@@ -24,7 +24,7 @@ TRIPWIRE_FILE="__secret_scan_tripwire__.txt"
 # script itself does not contain a literal that matches Gitleaks' stripe-access-token
 # rule (sk_live_[0-9a-zA-Z]{24}).  Neither half alone matches the rule.
 PREFIX="sk_live_"
-SUFFIX="1234567890abcdefghijklmnop"
+SUFFIX="1234567890abcdefghijklmn"
 FAKE_STRIPE_KEY="${PREFIX}${SUFFIX}"
 
 # Cleanup uses the repo's established "|| echo WARN" idiom (see
