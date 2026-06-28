@@ -12,7 +12,6 @@ from hermes.logging_config import setup_logging
 
 def _parse_args(settings: Settings, argv: list[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments, falling back to environment-variable defaults."""
-
     parser = argparse.ArgumentParser(
         prog="hermes",
         description="ProjectHermes — bridges external webhooks to NATS JetStream.",
