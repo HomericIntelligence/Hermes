@@ -59,12 +59,17 @@ Once the service is running, a NATS disconnect causes:
 
 ## Consequences
 
-- Hermes must be restarted (or NATS must recover and Hermes restarted) after a persistent NATS
-  disconnect; there is no self-healing at runtime.
-- Upstream callers must implement retry logic with backoff. This is standard practice for webhook
-  delivery (GitHub, Slack, and most SaaS platforms retry on `5xx` responses).
-- The `/health` endpoint accurately reflects the NATS connection state, enabling reliable liveness
-  and readiness probes.
+- The `nats.connect()` flag `allow_reconnect=False` is preserved to keep the false-ACK
+  protections described above. Runtime self-healing is delegated to an in-process
+  Hermes-owned reconnect loop (`Publisher._reconnect_loop`) introduced after this ADR;
+  see **ADR-002** for the loop's design, backoff parameters, settings, and metric
+  ownership.
+- Upstream callers must still implement retry logic with backoff: while a reconnect is
+  in flight, `POST /webhook` returns `503` because the publisher reports
+  `is_connected=False` (no silent buffering — ADR-001's core guarantee is intact).
+- `/health` continues to accurately reflect the NATS connection state and additionally
+  exposes `nats_reconnect_count` and `reconnect_loop_running` for operators
+  (`src/hermes/server.py:355, 361`).
 
 ---
 
@@ -80,6 +85,7 @@ Once the service is running, a NATS disconnect causes:
 
 ## Document Metadata
 
-**Status:** Accepted
+**Status:** Amended — the runtime-reconnect consequence is superseded by ADR-002.
 **Supersedes:** N/A
-**Superseded by:** N/A
+**Superseded by:** ADR-002 (runtime-reconnect portion only; the
+`allow_reconnect=False` decision and Rationale sections of ADR-001 remain in force).
