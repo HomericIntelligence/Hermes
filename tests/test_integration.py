@@ -18,7 +18,7 @@ from httpx import ASGITransport, AsyncClient
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher
 
-from tests.helpers import FIXED_TS as _FIXED_TS, sign_body
+from tests.helpers import FIXED_TS as _FIXED_TS, sign_body, wait_for_messages
 
 pytestmark = pytest.mark.integration
 
@@ -86,7 +86,7 @@ class TestPublisherIntegration:
             timestamp=_FIXED_TS,
         )
         await publisher.publish(payload)
-        await asyncio.sleep(0.1)
+        await wait_for_messages(received, expected=1, timeout=5.0)
 
         await sub.unsubscribe()
         assert len(received) == 1
@@ -112,7 +112,7 @@ class TestPublisherIntegration:
             timestamp=_FIXED_TS,
         )
         await publisher.publish(payload)
-        await asyncio.sleep(0.1)
+        await wait_for_messages(received, expected=1, timeout=5.0)
 
         await sub.unsubscribe()
         assert len(received) == 1
@@ -170,6 +170,7 @@ class TestWebhookIntegration:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.agents.>", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         # Ensure the app has a live publisher
         pub = Publisher()
@@ -197,7 +198,7 @@ class TestWebhookIntegration:
                 )
             assert response.status_code == 202
 
-            await asyncio.sleep(0.1)
+            await wait_for_messages(received, expected=1, timeout=5.0)
             assert len(received) >= 1
             assert received[0].subject == "hi.agents.e2e-host.e2e-agent.created"
         finally:
@@ -315,6 +316,7 @@ class TestEdgeCases:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.agents.>", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         payloads = [
             WebhookPayload(
@@ -325,7 +327,7 @@ class TestEdgeCases:
             for i in range(10)
         ]
         await asyncio.gather(*(publisher.publish(p) for p in payloads))
-        await asyncio.sleep(0.2)
+        await wait_for_messages(received, expected=10, timeout=5.0)
 
         await sub.unsubscribe()
         assert len(received) == 10
@@ -343,6 +345,7 @@ class TestEdgeCases:
             "hi.agents.large.large-agent.created",
             cb=_cb,
         )
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         large_data: dict[str, object] = {
             "host": "large",
@@ -355,7 +358,7 @@ class TestEdgeCases:
             timestamp=_FIXED_TS,
         )
         await publisher.publish(payload)
-        await asyncio.sleep(0.2)
+        await wait_for_messages(received, expected=1, timeout=5.0)
 
         await sub.unsubscribe()
         assert len(received) == 1
@@ -531,7 +534,7 @@ class TestPublishSchemaVersion:
             timestamp="2026-04-22T00:00:00Z",
         )
         await publisher.publish(payload)
-        await asyncio.sleep(0.1)
+        await wait_for_messages(received, expected=1, timeout=5.0)
 
         await sub.unsubscribe()
         assert len(received) == 1
@@ -558,7 +561,7 @@ class TestPublishSchemaVersion:
             timestamp="2026-04-22T00:00:00Z",
         )
         await publisher.publish(payload)
-        await asyncio.sleep(0.1)
+        await wait_for_messages(received, expected=1, timeout=5.0)
 
         await sub.unsubscribe()
         assert len(received) == 1
@@ -894,6 +897,7 @@ class TestRetryBehaviour:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.agents.retry-host.>", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         for i in range(2):
             payload = WebhookPayload(
@@ -903,7 +907,7 @@ class TestRetryBehaviour:
             )
             await publisher.publish(payload)
 
-        await asyncio.sleep(0.1)
+        await wait_for_messages(received, expected=2, timeout=5.0)
         await sub.unsubscribe()
         assert len(received) == 2
 
@@ -917,6 +921,7 @@ class TestRetryBehaviour:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.agents.reconnect-retry.>", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         pub = Publisher()
         await pub.connect(nats_url)
@@ -932,7 +937,7 @@ class TestRetryBehaviour:
                 timestamp="2026-04-22T00:00:00Z",
             )
             await pub2.publish(payload)
-            await asyncio.sleep(0.1)
+            await wait_for_messages(received, expected=1, timeout=5.0)
             assert len(received) == 1
         finally:
             await pub2.disconnect()
@@ -1031,6 +1036,7 @@ class TestRequestIdInNats:
             received.append(m)
 
         sub = await nats_client.subscribe("hi.agents.reqid-host.reqid-agent.created", cb=_cb)
+        await nats_client.flush()  # ensure server has ack'd the subscription before we publish
 
         pub = Publisher()
         await pub.connect(nats_url)
@@ -1058,7 +1064,7 @@ class TestRequestIdInNats:
                 )
             assert response.status_code == 202
 
-            await asyncio.sleep(0.1)
+            await wait_for_messages(received, expected=1, timeout=5.0)
             assert len(received) == 1
 
             nats_body = json.loads(received[0].data)
