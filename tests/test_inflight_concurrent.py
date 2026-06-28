@@ -125,7 +125,6 @@ class TestInflightUnderConcurrency:
 
         n = 5
         gate = asyncio.Event()
-        gather_done = False
 
         async def _blocking(*args: object, **kwargs: object) -> None:
             await gate.wait()
@@ -133,11 +132,9 @@ class TestInflightUnderConcurrency:
         env.publish = AsyncMock(side_effect=_blocking)
 
         async def _run_gather() -> list:
-            nonlocal gather_done
             result = await asyncio.gather(
                 *(client.post("/webhook", content=_BODY, headers=_HEADERS) for _ in range(n))
             )
-            gather_done = True
             return result
 
         async with _client() as client:
