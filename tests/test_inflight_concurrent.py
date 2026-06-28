@@ -232,6 +232,7 @@ class TestInflightUnderConcurrency:
             await asyncio.sleep(0.01)
             try:
                 peak = await _wait_for_inflight(n)
+                assert peak == n
                 health = await client.get("/health")
                 health_data = health.json()
                 assert health_data["inflight_requests"] == n
