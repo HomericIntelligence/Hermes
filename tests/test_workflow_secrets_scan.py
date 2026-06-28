@@ -5,6 +5,8 @@ import re
 
 _WORKFLOW = pathlib.Path(__file__).parent.parent / ".github" / "workflows" / "_required.yml"
 
+_GITLEAKS_CONFIG = pathlib.Path(__file__).parent.parent / ".gitleaks.toml"
+
 
 def test_gitleaks_advisory_exit_code_absent() -> None:
     """--exit-code 0 must not appear in the secrets-scan step."""
@@ -38,4 +40,23 @@ def test_gitleaks_step_has_no_continue_on_error() -> None:
     assert "continue-on-error: true" not in step_block, (
         "The 'Run Gitleaks' step must not set continue-on-error: true — "
         "that would suppress the non-zero exit code and make enforcement useless."
+    )
+
+
+def test_gitleaks_config_extends_default_rules() -> None:
+    """'.gitleaks.toml' must declare '[extend] useDefault = true'.
+
+    Without this stanza, a config file with only an [allowlist] section causes
+    Gitleaks to load zero built-in rules — the gate passes silently even when
+    real secrets are committed.  This was the root-cause bug found during the
+    issue-#507 E2E verification.
+    """
+    content = _GITLEAKS_CONFIG.read_text()
+    assert re.search(r"^\[extend\]", content, re.MULTILINE), (
+        ".gitleaks.toml must have an [extend] section."
+    )
+    assert re.search(r"^useDefault\s*=\s*true", content, re.MULTILINE), (
+        ".gitleaks.toml must set 'useDefault = true' under [extend] so that "
+        "Gitleaks loads its default ruleset.  Without this, the config replaces "
+        "all built-in rules and the gate never fires."
     )
