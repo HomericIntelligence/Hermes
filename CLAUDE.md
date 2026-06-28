@@ -99,6 +99,8 @@ Configure external services to POST to `http://<hermes-host>:<HERMES_PORT>/webho
 > incrementing `hermes_dead_letter_evictions_total`. The durable JetStream copy
 > is unaffected (no data loss).
 
+<!-- -->
+
 > **Security warning:** Setting `TLS_VERIFY=false` disables TLS certificate verification and MUST
 > NOT be used in production.  When `TLS_VERIFY=false` is combined with `HERMES_HOST=0.0.0.0`
 > (production binding), Hermes logs a loud `WARNING` at startup.  Always use a valid CA bundle
