@@ -171,23 +171,25 @@ class TestInflightUnderConcurrency:
         assert all(r.status_code == 202 for r in responses)
         assert srv._inflight == 0
 
-    async def test_inflight_lock_serializes_increments_under_concurrency(
+    async def test_inflight_peak_count_accurate_under_n_concurrent_requests(
         self, env: MagicMock
     ) -> None:
-        """Lock correctly serializes counter increments across N concurrent requests.
+        """Counter reaches exactly N mid-flight and returns to 0 under N=20 load.
 
-        Verifies that increments and decrements never race: counter reaches
-        exactly N mid-flight (not a partial value), and the lock protects
-        the read–modify–write cycle.
+        Verifies peak-count accuracy, not lock mutual exclusion: under cooperative
+        asyncio scheduling, ``_inflight += 1`` in ``_inflight_context`` has no await
+        between read and write, so it cannot be interleaved and the lock is not
+        exercised by simply issuing concurrent requests. What this test does prove
+        is that with N=20 requests held inside publish(), the counter reaches
+        exactly N (no requests dropped or double-counted) and drains back to 0 once
+        all requests complete.
         """
         import hermes.server as srv
 
         n = 20
         gate = asyncio.Event()
-        peak_observed = []
 
         async def _blocking(*args: object, **kwargs: object) -> None:
-            peak_observed.append(srv._inflight)
             await gate.wait()
 
         env.publish = AsyncMock(side_effect=_blocking)
@@ -210,7 +212,6 @@ class TestInflightUnderConcurrency:
         assert all(r.status_code == 202 for r in responses)
         assert srv._inflight == 0
         assert env.publish.await_count == n
-        assert len(peak_observed) == n, f"Expected {n} publish calls, got {len(peak_observed)}"
 
     async def test_health_reflects_peak_inflight_count(self, env: MagicMock) -> None:
         """The /health endpoint accurately reports peak _inflight reached during load."""
@@ -247,22 +248,28 @@ class TestInflightUnderConcurrency:
     async def test_inflight_decrements_correctly_on_concurrent_errors(
         self, env: MagicMock
     ) -> None:
-        """Errors in concurrent requests correctly decrement _inflight."""
+        """Errors in concurrent requests correctly decrement _inflight.
+
+        Uses asyncio.TimeoutError as the publish error because _handle_webhook
+        catches it and returns a real 503 HTTP response (server.py line 441-451).
+        RuntimeError is NOT caught by _handle_webhook, so with ASGITransport's
+        default raise_app_exceptions=True it would propagate out of the ASGI
+        app — making r.status_code == 503 unreachable dead code.
+        """
         import hermes.server as srv
 
         n = 5
         gate = asyncio.Event()
 
-        async def _blocking_then_error(*args: object, **kwargs: object) -> None:
+        async def _blocking(*args: object, **kwargs: object) -> None:
             await gate.wait()
-            raise RuntimeError("test error")
+            raise asyncio.TimeoutError()
 
-        env.publish = AsyncMock(side_effect=_blocking_then_error)
+        env.publish = AsyncMock(side_effect=_blocking)
 
         async def _run_gather() -> list:
             return await asyncio.gather(
-                *(client.post("/webhook", content=_BODY, headers=_HEADERS) for _ in range(n)),
-                return_exceptions=True,
+                *(client.post("/webhook", content=_BODY, headers=_HEADERS) for _ in range(n))
             )
 
         async with _client() as client:
@@ -275,8 +282,5 @@ class TestInflightUnderConcurrency:
                 gate.set()
             responses = await gather_task
 
-        for r in responses:
-            if isinstance(r, RuntimeError):
-                continue
-            assert hasattr(r, "status_code") and r.status_code == 503
+        assert all(r.status_code == 503 for r in responses)
         assert srv._inflight == 0
