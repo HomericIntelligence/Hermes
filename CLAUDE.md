@@ -113,6 +113,14 @@ Configure external services to POST to `http://<hermes-host>:<HERMES_PORT>/webho
    hyphens, dots become hyphens, and wildcards (`*` and `>`) are stripped entirely. Tokens are
    lowercased and subject strings are typically capped at 64 characters.
 
+## Logging
+
+`setup_logging()` (in `src/hermes/logging_config.py`) configures the root logger
+and writes to `sys.stdout` by default, matching the pre-#328
+`logging.basicConfig(stream=sys.stdout)` behaviour that downstream pipelines and
+log collectors depend on. Callers that need stderr can pass
+`stream=sys.stderr` explicitly. See issue #462.
+
 ## Future Integrations
 
 ### Agamemnon (deferred — fields removed per #324)
