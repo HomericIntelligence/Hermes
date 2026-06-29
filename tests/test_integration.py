@@ -817,8 +817,8 @@ class TestReconnectLoopFiresAfterClose:
 
             # (2) Force a real disconnect by closing the underlying NATS client.
             #     With allow_reconnect=False (publisher.py:159), close() drives
-            #     is_closed=True and triggers disconnected_cb, which clears
-            #     pub._connected (publisher.py:141).
+            #     is_closed=True — the condition the production reconnect loop
+            #     checks (publisher.py:206).
             assert pub._nc is not None
             await pub._nc.close()
 
