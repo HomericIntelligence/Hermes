@@ -505,3 +505,36 @@ jobs:
           else
             echo "OK: pixi.lock is clean"
           fi
+
+  openapi-drift:
+    name: openapi-drift
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: v0.68.0
+          cache: true
+
+      - name: Re-export OpenAPI spec
+        run: pixi run python scripts/export-openapi.py --output /tmp/openapi-ci.json
+
+      - name: Confirm export is deterministic (two runs match)
+        # Guards against any future regression that would reintroduce non-deterministic
+        # key ordering and false-positive the diff step below.
+        run: |
+          set -euo pipefail
+          pixi run python scripts/export-openapi.py --output /tmp/openapi-ci-2.json
+          diff -u /tmp/openapi-ci.json /tmp/openapi-ci-2.json
+
+      - name: Diff committed openapi.json against fresh export
+        run: |
+          set -euo pipefail
+          if ! diff -u openapi.json /tmp/openapi-ci.json; then
+            echo ""
+            echo '::error::openapi.json is out of date. Run `just export-openapi` and commit the result.'
+            exit 1
+          fi
+          echo "OK: openapi.json matches the live FastAPI schema"
