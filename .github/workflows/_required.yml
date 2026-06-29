@@ -515,7 +515,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.9.5
         with:
-          pixi-version: v0.68.0
+          pixi-version: v0.67.2
           cache: true
 
       - name: Re-export OpenAPI spec
