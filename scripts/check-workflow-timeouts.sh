@@ -53,7 +53,7 @@ for path in sys.argv[1:]:
             )
             failed = True
             continue
-        if not isinstance(tm, int) or tm <= 0:
+        if not isinstance(tm, int) or isinstance(tm, bool) or tm <= 0:
             print(
                 f"::error file={path}::job `{job_id}` `timeout-minutes` "
                 f"must be a positive integer, got {tm!r}"
