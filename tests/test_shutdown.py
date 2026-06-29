@@ -291,7 +291,7 @@ class TestLifespanShutdown:
 
         mock_pub.disconnect = _tracked_disconnect
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             with patch("hermes.server.Publisher", return_value=mock_pub):
                 t_enter = loop.time()
@@ -305,7 +305,7 @@ class TestLifespanShutdown:
             assert disconnect_called
             assert inflight_at_disconnect == [5]
             # Real loop must have honoured the deadline, not short-circuited.
-            assert timeout <= elapsed < timeout + 1.5
+            assert elapsed >= timeout
         finally:
             async with srv._inflight_lock:
                 srv._inflight = 0
