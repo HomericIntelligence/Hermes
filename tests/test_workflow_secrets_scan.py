@@ -143,7 +143,10 @@ def test_gitleaks_allowlist_does_not_cover_repo_root() -> None:
     data = tomllib.loads(_GITLEAKS_TOML.read_text())
     paths: list[str] = data.get("allowlist", {}).get("paths", [])
 
-    root_patterns = [p for p in paths if re.fullmatch(p, "gitleaks-smoke.txt") is not None]
+    # Gitleaks evaluates allowlist.paths as unanchored regex searches
+    # (Go regexp.MatchString), so mirror that with re.search rather than
+    # re.fullmatch to actually guard the precondition this test protects.
+    root_patterns = [p for p in paths if re.search(p, "gitleaks-smoke.txt") is not None]
     assert root_patterns == [], (
         f"The allowlist patterns {root_patterns!r} match 'gitleaks-smoke.txt' at the "
         "repo root — a secret planted there would be silently ignored, making the "
