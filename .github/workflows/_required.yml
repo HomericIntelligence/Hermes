@@ -230,6 +230,24 @@ jobs:
       - name: Assert no :latest image tags
         run: bash scripts/check-no-latest-tags.sh
 
+  workflow-timeouts:
+    # Regression guard for #420: every job in .github/workflows/*.yml MUST
+    # declare `timeout-minutes`. JSON-Schema validation (schema-validation
+    # job) cannot enforce this semantic rule. Reusable-workflow callers are
+    # skipped automatically — GitHub rejects `timeout-minutes` on those.
+    name: workflow-timeouts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    needs: lint
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      - name: Install pyyaml
+        run: pip install --quiet pyyaml
+      - name: Assert every workflow job has timeout-minutes
+        run: bash scripts/check-workflow-timeouts.sh
+
   unit-tests:
     name: unit-tests
     runs-on: ubuntu-24.04
