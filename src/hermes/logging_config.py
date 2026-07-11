@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Structured JSON logging configuration for ProjectHermes."""
+"""Structured JSON logging configuration for Hermes."""
 
 from __future__ import annotations
 

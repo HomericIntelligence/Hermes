@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""NATS JetStream publisher for ProjectHermes."""
+"""NATS JetStream publisher for Hermes."""
 
 from __future__ import annotations
 

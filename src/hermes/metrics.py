@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Prometheus metric singletons for ProjectHermes."""
+"""Prometheus metric singletons for Hermes."""
 
 from __future__ import annotations
 

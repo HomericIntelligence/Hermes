@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for ProjectHermes tests."""
+"""Shared pytest fixtures for Hermes tests."""
 
 from __future__ import annotations
 

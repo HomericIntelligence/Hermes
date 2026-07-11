@@ -60,7 +60,7 @@ untrusted input in this job must update this ADR.
 Consumers verify an image with:
 
 ```bash
-gh attestation verify oci://ghcr.io/<org>/projecthermes:<tag> --owner <org>
+gh attestation verify oci://ghcr.io/<org>/hermes:<tag> --owner <org>
 ```
 
 The command exits non-zero if the attestation is absent, forged, or does not match the

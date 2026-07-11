@@ -14,7 +14,7 @@ main() is the backstop that preserves this contract even if coverage.xml is
 malformed, pyproject.toml is missing, or the workflow file is unreadable.
 This bare-Exception catch is intentional and confined to this script —
 the advisory step must never block CI. See
-HomericIntelligence/ProjectHermes#479 (follow-up from #332).
+HomericIntelligence/Hermes#479 (follow-up from #332).
 """
 
 from __future__ import annotations

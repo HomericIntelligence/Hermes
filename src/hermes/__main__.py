@@ -14,7 +14,7 @@ def _parse_args(settings: Settings, argv: list[str] | None = None) -> argparse.N
     """Parse CLI arguments, falling back to environment-variable defaults."""
     parser = argparse.ArgumentParser(
         prog="hermes",
-        description="ProjectHermes — bridges external webhooks to NATS JetStream.",
+        description="Hermes — bridges external webhooks to NATS JetStream.",
     )
     parser.add_argument(
         "--host",

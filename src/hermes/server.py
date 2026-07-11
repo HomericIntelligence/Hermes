@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""FastAPI application for ProjectHermes."""
+"""FastAPI application for Hermes."""
 
 from __future__ import annotations
 
@@ -209,7 +209,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="ProjectHermes",
+    title="Hermes",
     description="Bridges external webhooks to NATS JetStream.",
     version=__version__,
     lifespan=lifespan,
