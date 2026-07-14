@@ -12,7 +12,12 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
 cd "$ROOT"
 
-mapfile -t files < <(git ls-files -- \
+# NOTE: portable across bash 3.2 (macOS ships 3.2; `mapfile` needs bash 4+).
+# macos-tests runs tests/test_workflow_timeouts.py against this script.
+files=()
+while IFS= read -r f; do
+  files+=("$f")
+done < <(git ls-files -- \
   '.github/workflows/*.yml' '.github/workflows/*.yaml')
 
 if [ "${#files[@]}" -eq 0 ]; then

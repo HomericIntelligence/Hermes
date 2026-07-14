@@ -130,7 +130,10 @@ jobs:
         os:
           - ubuntu-24.04
           - macos-14  # arm64 — validates osx-arm64 entries in pixi.lock (issue #501)
-          - macos-13  # x86_64 — validates osx-64 entries in pixi.lock (issue #501)
+          # macos-13 runners were retired by GitHub (jobs queue forever and
+          # strand the workflow run); macos-15-intel is the remaining x86_64
+          # hosted label and keeps the osx-64 lock validation (issue #501).
+          - macos-15-intel  # x86_64 — validates osx-64 entries in pixi.lock (issue #501)
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - name: Skip if no pixi.toml
@@ -161,7 +164,7 @@ jobs:
   # Preserves the historical required-check name `pixi-check` so existing
   # branch-protection rules continue to gate merges. Succeeds iff every leg
   # of pixi-check-matrix succeeded. Repo admins can later add the per-OS
-  # leg names (pixi-check-matrix (macos-14), pixi-check-matrix (macos-13))
+  # leg names (pixi-check-matrix (macos-14), pixi-check-matrix (macos-15-intel))
   # as additional required checks at their pace; this aggregator works in
   # the meantime so no protection window opens at merge time.
   pixi-check:
