@@ -1,6 +1,6 @@
 # scripts/
 
-Helper scripts for ProjectHermes development and CI. Run them from the repo root.
+Helper scripts for Hermes development and CI. Run them from the repo root.
 
 | Script                 | When to run                                                  | What it does                                                                 |
 |------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------|

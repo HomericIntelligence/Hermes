@@ -1,8 +1,8 @@
-# ProjectHermes — CLAUDE.md
+# Hermes — CLAUDE.md
 
 ## Project Overview
 
-ProjectHermes is a lightweight Python service that bridges external webhooks to NATS JetStream.
+Hermes is a lightweight Python service that bridges external webhooks to NATS JetStream.
 It sits at the boundary of the HomericIntelligence mesh, translating HTTP webhook payloads
 from external services (GitHub, Slack, third-party APIs) into durable, replayable NATS messages.
 
@@ -191,21 +191,21 @@ docker run --rm \
   --security-opt no-new-privileges:true \
   -p 8085:8085 \
   -e NATS_URL=nats://host:4222 \
-  ghcr.io/homericintelligence/projecthermes:<tag>
+  ghcr.io/homericintelligence/hermes:<tag>
 ```
 
 The `--tmpfs /tmp` mount is required by the Python interpreter and Uvicorn for ephemeral state.
 
 ## CI/CD
 
-Docker images are published to GHCR (`ghcr.io/<org>/projecthermes`) **only on version tags**
+Docker images are published to GHCR (`ghcr.io/<org>/hermes`) **only on version tags**
 matching `v*.*.*` and via manual `workflow_dispatch`. Merges to `main` do **not** trigger a
 publish. To release a new image, push a semver tag (e.g.
 `git tag v1.2.3 && git push origin v1.2.3`).
 
 Each published image carries SLSA provenance (`mode=max`) and an SPDX SBOM attestation
 (see [ADR-004](docs/adr/ADR-004-slsa-build-provenance.md)). Verify with:
-`gh attestation verify oci://ghcr.io/<org>/projecthermes:<tag> --owner <org>`
+`gh attestation verify oci://ghcr.io/<org>/hermes:<tag> --owner <org>`
 
 Coverage uploads to Codecov are gated on the repository secret `CODECOV_TOKEN`.
 When the secret is unset the upload step is skipped and CI stays green; setting

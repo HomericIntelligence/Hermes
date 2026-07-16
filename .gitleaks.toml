@@ -1,4 +1,4 @@
-title = "ProjectHermes gitleaks config"
+title = "Hermes gitleaks config"
 
 [extend]
 useDefault = true

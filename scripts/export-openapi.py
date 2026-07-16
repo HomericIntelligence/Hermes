@@ -35,7 +35,7 @@ def main() -> None:
         help=(
             "Output format. 'yaml' emits PyYAML-formatted output for "
             "OpenAPI tooling that prefers YAML (Stoplight, Redocly, Spectral). "
-            "See HomericIntelligence/ProjectHermes#433."
+            "See HomericIntelligence/Hermes#433."
         ),
     )
     args = parser.parse_args()

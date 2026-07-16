@@ -9,7 +9,7 @@
 
 **Version Support Policy:**
 
-ProjectHermes is in active development (pre-v1.0). We recommend always running the latest commit
+Hermes is in active development (pre-v1.0). We recommend always running the latest commit
 from the `main` branch to receive the most up-to-date security fixes and improvements. Once we
 reach v1.0, we will provide a more detailed long-term support (LTS) policy.
 
@@ -159,7 +159,7 @@ When you report a vulnerability:
 
 ## Security Best Practices
 
-When contributing to ProjectHermes:
+When contributing to Hermes:
 
 - Validate all webhook callback URLs against an allowlist
 - Authenticate webhook senders using signatures or shared secrets

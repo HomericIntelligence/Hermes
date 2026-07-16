@@ -1,11 +1,11 @@
-# ProjectHermes
+# Hermes
 
-[![codecov](https://img.shields.io/codecov/c/github/HomericIntelligence/ProjectHermes?logo=codecov)](https://codecov.io/gh/HomericIntelligence/ProjectHermes)
-[![CI](https://github.com/HomericIntelligence/ProjectHermes/actions/workflows/ci.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectHermes/actions/workflows/ci.yml)
-[![Publish](https://github.com/HomericIntelligence/ProjectHermes/actions/workflows/publish.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectHermes/actions/workflows/publish.yml)
-[![Security](https://github.com/HomericIntelligence/ProjectHermes/actions/workflows/security.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectHermes/actions/workflows/security.yml)
+[![codecov](https://img.shields.io/codecov/c/github/HomericIntelligence/Hermes?logo=codecov)](https://codecov.io/gh/HomericIntelligence/Hermes)
+[![CI](https://github.com/HomericIntelligence/Hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/HomericIntelligence/Hermes/actions/workflows/ci.yml)
+[![Publish](https://github.com/HomericIntelligence/Hermes/actions/workflows/publish.yml/badge.svg)](https://github.com/HomericIntelligence/Hermes/actions/workflows/publish.yml)
+[![Security](https://github.com/HomericIntelligence/Hermes/actions/workflows/security.yml/badge.svg)](https://github.com/HomericIntelligence/Hermes/actions/workflows/security.yml)
 
-ProjectHermes bridges external webhooks (GitHub, Slack, third-party APIs) to
+Hermes bridges external webhooks (GitHub, Slack, third-party APIs) to
 [NATS JetStream](https://docs.nats.io/nats-concepts/jetstream) for pub/sub fan-out and event
 replay across the HomericIntelligence ecosystem.
 
