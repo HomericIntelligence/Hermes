@@ -34,7 +34,7 @@ dependencies = [
     # Bumped to >=2.14.2 to remediate GHSA-4xgf-cpjx-pc3j (pip-audit).
     "pydantic-settings>=2.14.2,<3",
     "httpx>=0.28.1,<1",
-    "slowapi>=0.1.9,<1",
+    "slowapi>=0.1.10,<1",
     "limits>=5.8.0,<6",
     "prometheus-client>=0.20,<1",
     # Pinned to remediate CVE-2026-44431 / CVE-2026-44432 (transitive via cachecontrol/requests).
