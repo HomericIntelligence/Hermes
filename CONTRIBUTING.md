@@ -1,6 +1,6 @@
-# Contributing to ProjectHermes
+# Contributing to Hermes
 
-Thank you for your interest in contributing to ProjectHermes! This is the NATS event bridge
+Thank you for your interest in contributing to Hermes! This is the NATS event bridge
 for the [HomericIntelligence](https://github.com/HomericIntelligence) distributed agent mesh —
 it bridges external webhooks to NATS JetStream for pub/sub fan-out and event replay.
 
@@ -29,8 +29,8 @@ For an overview of the full ecosystem, see the
 
 ```bash
 # Clone the repository
-git clone https://github.com/HomericIntelligence/ProjectHermes.git
-cd ProjectHermes
+git clone https://github.com/HomericIntelligence/Hermes.git
+cd Hermes
 
 # Activate the Pixi environment
 pixi shell
@@ -70,7 +70,7 @@ just test
 
 Before starting work:
 
-- Browse [existing issues](https://github.com/HomericIntelligence/ProjectHermes/issues)
+- Browse [existing issues](https://github.com/HomericIntelligence/Hermes/issues)
 - Comment on an issue to claim it before starting work
 - Create a new issue if one doesn't exist for your contribution
 
@@ -167,7 +167,7 @@ just health
 
 ### Releasing a New Version
 
-Hermes publishes Docker images to GHCR (`ghcr.io/homericintelligence/projecthermes`) **only** on
+Hermes publishes Docker images to GHCR (`ghcr.io/homericintelligence/hermes`) **only** on
 SemVer tags matching `v*.*.*`. Merges to `main` do not trigger a publish. To cut a release:
 
 ```bash
@@ -188,7 +188,7 @@ git push origin v0.X.Y
 
 # 4. Watch the Publish workflow run; verify the image lands on GHCR
 gh run watch --exit-status
-gh api /orgs/HomericIntelligence/packages/container/projecthermes/versions \
+gh api /orgs/HomericIntelligence/packages/container/hermes/versions \
   --jq '.[0:3] | .[] | {name, created_at, metadata: .metadata.container.tags}'
 ```
 
@@ -339,4 +339,4 @@ Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ---
 
-Thank you for contributing to ProjectHermes!
+Thank you for contributing to Hermes!

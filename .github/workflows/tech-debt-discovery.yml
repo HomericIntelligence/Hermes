@@ -2,7 +2,7 @@
 # Weekly scheduled run of scripts/discover-tech-debt.sh — posts the summary as
 # a comment on Epic #544 only when newly introduced debt markers are found,
 # so maintainers are notified without relying on manual runs.
-# See HomericIntelligence/ProjectHermes#549.
+# See HomericIntelligence/Hermes#549.
 
 name: tech-debt-discovery
 

@@ -1,5 +1,5 @@
 [workspace]
-name = "project-hermes"
+name = "hermes"
 version = "0.1.0"
 description = "Bridges external webhooks to NATS JetStream for pub/sub fan-out and event replay"
 channels = ["conda-forge"]

@@ -1,6 +1,6 @@
 # AGENTS.md — HomericIntelligence Multi-Agent Coordination
 
-This document describes how AI agents interact with **ProjectHermes** — the primary HTTP-to-NATS
+This document describes how AI agents interact with **Hermes** — the primary HTTP-to-NATS
 bridge in the HomericIntelligence mesh. It covers three audiences:
 
 1. **Event producers** — agents that POST webhook events to Hermes

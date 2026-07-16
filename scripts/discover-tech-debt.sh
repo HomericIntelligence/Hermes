@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "=== Technical Debt Discovery: ProjectHermes ==="
+echo "=== Technical Debt Discovery: Hermes ==="
 # grep -r exits 0 on match, 1 on no-match. We surface that as the script's own
 # exit code so the CI workflow can decide whether to comment on Epic #544.
 # `set -e` would abort on a non-match, so guard with `|| rc=$?`.

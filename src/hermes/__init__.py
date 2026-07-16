@@ -1,4 +1,4 @@
-"""ProjectHermes — external webhook to NATS JetStream bridge."""
+"""Hermes — external webhook to NATS JetStream bridge."""
 
 from importlib.metadata import PackageNotFoundError, version
 

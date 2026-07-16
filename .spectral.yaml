@@ -1,4 +1,4 @@
-# Spectral ruleset for ProjectHermes openapi.json (issue #434).
+# Spectral ruleset for Hermes openapi.json (issue #434).
 # Extends spectral:oas (Spectral's built-in OpenAPI 3.x rules) and bumps the
 # two rules issue #434 names — missing operation descriptions and missing
 # response examples — to error severity.
