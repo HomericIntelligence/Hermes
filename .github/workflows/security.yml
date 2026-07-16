@@ -3,6 +3,8 @@ name: Security Scan
 on:
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
   schedule:
     # Weekly on Monday at 08:00 UTC
     - cron: "0 8 * * 1"
