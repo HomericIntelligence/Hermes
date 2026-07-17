@@ -1349,7 +1349,7 @@ packages:
   - prometheus-client>=0.20,<1
   - urllib3>=2.7.0,<3
   - msgpack>=1.2.1,<2
-  - pytest>=9.0,<10 ; extra == 'dev'
+  - pytest>=9.1.1,<10 ; extra == 'dev'
   - pytest-asyncio>=1.0,<2 ; extra == 'dev'
   - pytest-cov>=7.1.0,<8 ; extra == 'dev'
   - ruff>=0.11,<1 ; extra == 'dev'
