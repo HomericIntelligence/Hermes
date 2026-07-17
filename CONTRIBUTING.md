@@ -294,6 +294,36 @@ gh pr create --title "[Type] Brief description" --body "Closes #<issue-number>"
 - Single-concern PRs: squash-and-merge
 - Multi-commit story-arc PRs: rebase-and-merge
 
+### Merge Queue Rollout
+
+The workflows that emit required `main` checks also handle
+`merge_group` / `checks_requested`, so queued merge groups run the same gates as pull requests.
+The queue is activated separately from workflow-readiness changes: a maintainer must wait until
+the readiness PR has merged and a representative smoke check is ready. Existing merge behavior
+remains unchanged until activation; after activation, queued merges use squash regardless of the
+pre-queue strategy above.
+
+When activation is approved, add a `merge_queue` rule to the active
+`homeric-main-baseline` repository ruleset targeting `refs/heads/main` with these exact parameters:
+
+```json
+{
+  "check_response_timeout_minutes": 60,
+  "grouping_strategy": "ALLGREEN",
+  "max_entries_to_build": 10,
+  "max_entries_to_merge": 5,
+  "merge_method": "SQUASH",
+  "min_entries_to_merge": 1,
+  "min_entries_to_merge_wait_minutes": 5
+}
+```
+
+Apply the rule with a read-modify-write operation that preserves every existing required status
+context and all unrelated protection fields. After activation, queue one representative PR and
+record the `merge_group` workflow runs and merge result in
+[Hermes #720](https://github.com/HomericIntelligence/Hermes/issues/720) before declaring the
+repository complete.
+
 ### Never Push Directly to Main
 
 The `main` branch is protected. All changes must go through pull requests.
