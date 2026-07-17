@@ -1352,7 +1352,7 @@ packages:
   - pytest>=9.0,<10 ; extra == 'dev'
   - pytest-asyncio>=1.0,<2 ; extra == 'dev'
   - pytest-cov>=7.1.0,<8 ; extra == 'dev'
-  - ruff>=0.11,<1 ; extra == 'dev'
+  - ruff>=0.15.22,<1 ; extra == 'dev'
   - mypy>=1.10,<2 ; extra == 'dev'
   - pip-audit>=2.7,<3 ; extra == 'dev'
   - pip>=26.1,<27 ; extra == 'dev'
