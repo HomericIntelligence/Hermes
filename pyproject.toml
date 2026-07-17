@@ -49,7 +49,7 @@ dependencies = [
 # Keep ranges in sync with pixi.toml.
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.0,<10",
+    "pytest>=9.1.1,<10",
     "pytest-asyncio>=1.0,<2",
     "pytest-cov>=7.1.0,<8",
     "ruff>=0.11,<1",
