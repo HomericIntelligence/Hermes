@@ -1355,7 +1355,7 @@ packages:
   - ruff>=0.11,<1 ; extra == 'dev'
   - mypy>=1.10,<2 ; extra == 'dev'
   - pip-audit>=2.7,<3 ; extra == 'dev'
-  - pip>=26.1,<27 ; extra == 'dev'
+  - pip>=26.1.2,<27 ; extra == 'dev'
   - pre-commit>=3.0,<5 ; extra == 'dev'
   requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
