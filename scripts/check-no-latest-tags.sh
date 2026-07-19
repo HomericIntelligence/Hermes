@@ -46,7 +46,7 @@ pattern_uses_latest='uses:[[:space:]]*[^[:space:]]+@latest([[:space:]]|$)'
 # Combined ERE for a single grep pass per file.
 combined="(${pattern_image})|(${pattern_uses_latest})"
 
-# `set +e` bracket is documented in CLAUDE.md as the approved alternative to
+# `set +e` bracket is documented in AGENTS.md as the approved alternative to
 # `|| true` (which the forbid-suppressions guard rejects). We need grep's
 # exit status here because "no match" (1) is the success case for us.
 fail=0

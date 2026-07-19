@@ -54,7 +54,7 @@ for path in sys.argv[1:]:
         if tm is None:
             print(
                 f"::error file={path}::job `{job_id}` is missing required "
-                f"`timeout-minutes` (see CLAUDE.md / issue #420)"
+                f"`timeout-minutes` (see AGENTS.md / issue #420)"
             )
             failed = True
             continue
