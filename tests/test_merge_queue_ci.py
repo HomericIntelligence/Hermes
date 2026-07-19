@@ -45,16 +45,38 @@ def _trigger(document: dict) -> dict:
     return trigger
 
 
+_SMOKE_WORKFLOW = "merge-queue-smoke.yml"
+
+
 @pytest.mark.parametrize("workflow_name", _REQUIRED_CONTEXTS_BY_WORKFLOW)
-def test_required_context_workflows_handle_merge_group_checks_requested(
+def test_required_context_workflows_do_not_rerun_on_merge_group(
     workflow_name: str,
 ) -> None:
-    """Every workflow that gates main must also run for merge-queue groups."""
-    merge_group = _trigger(_load_workflow(workflow_name)).get("merge_group")
-    assert merge_group == {"types": ["checks_requested"]}, (
-        f"{workflow_name} must handle merge_group/checks_requested so its required "
-        "contexts are emitted for merge-queue groups"
+    """Full CI must not re-execute in the merge queue (runner starvation).
+
+    merge_group events are handled exclusively by the fast smoke workflow
+    (merge-queue-smoke.yml); PR/push testing is unchanged.
+    """
+    trigger = _trigger(_load_workflow(workflow_name))
+    assert "merge_group" not in trigger, (
+        f"{workflow_name} must not trigger on merge_group — the queue runs only "
+        f"{_SMOKE_WORKFLOW} so a merge group consumes a single runner slot"
     )
+
+
+def test_merge_queue_smoke_workflow_is_the_sole_merge_group_gate() -> None:
+    """The smoke workflow runs only on merge_group and emits one smoke job."""
+    document = _load_workflow(_SMOKE_WORKFLOW)
+    trigger = _trigger(document)
+    assert trigger == {"merge_group": {"types": ["checks_requested"]}}, (
+        f"{_SMOKE_WORKFLOW} must trigger exclusively on "
+        "merge_group/checks_requested"
+    )
+    jobs = document.get("jobs", {})
+    assert list(jobs) == ["merge-queue-smoke"], (
+        f"{_SMOKE_WORKFLOW} must define exactly one job: merge-queue-smoke"
+    )
+    assert jobs["merge-queue-smoke"].get("name") == "merge-queue-smoke"
 
 
 @pytest.mark.parametrize(

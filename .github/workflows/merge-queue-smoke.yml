@@ -1,0 +1,44 @@
+name: Merge Queue Smoke
+
+# Sole merge_group workflow. Full CI (up to 16 jobs re-queued per merge group,
+# 70-90 min under runner-slot starvation) already ran on the pull_request; the
+# queue only needs a fast real sanity gate. One job = one runner slot, < 5 min.
+# PR-side CI is untouched: this workflow emits the single `merge-queue-smoke`
+# context that the branch rulesets gate the queue on after rollout.
+
+on:
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mq-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  merge-queue-smoke:
+    name: merge-queue-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+
+      - name: Run symlink check
+        run: bash scripts/check-symlinks.sh
+
+      - name: Assert no :latest image tags
+        run: bash scripts/check-no-latest-tags.sh
+
+      - name: Assert every workflow job has timeout-minutes
+        run: |
+          pip install --quiet pyyaml
+          bash scripts/check-workflow-timeouts.sh
+
+      - name: Validate workflow YAML schemas
+        run: |
+          pip install --quiet check-jsonschema
+          find .github/workflows -name "*.yml" | \
+            xargs check-jsonschema \
+              --schemafile https://json.schemastore.org/github-workflow
