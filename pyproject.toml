@@ -7,7 +7,7 @@ name = "hermes"
 version = "0.1.0"
 description = "Lightweight service bridging external webhooks to NATS JetStream"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.13,<3.14"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -16,6 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 # pixi.toml [pypi-dependencies] is the authoritative source — keep these ranges in sync.
 # scripts/check_dep_sync.py enforces parity between this list and pixi.toml in CI.
