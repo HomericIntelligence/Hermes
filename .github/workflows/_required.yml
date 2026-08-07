@@ -300,6 +300,24 @@ jobs:
       - name: unit-tests (in container)
         run: bash scripts/run_ci_local.sh unit-tests
 
+      - name: Per-module coverage minimums
+        run: |
+          podman run --rm --userns=keep-id:uid=1000,gid=1000 \
+            -v "$PWD:/workspace:Z" -w /workspace hermes-ci:local \
+            bash -lc '
+            pixi install --locked --quiet
+            pixi run coverage report --include="src/hermes/__init__.py" --fail-under=70
+            pixi run coverage report --include="src/hermes/__main__.py" --fail-under=95
+            pixi run coverage report --include="src/hermes/config.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/logging_config.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/metrics.py" --fail-under=95
+            pixi run coverage report --include="src/hermes/middleware.py" --fail-under=80
+            pixi run coverage report --include="src/hermes/models.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/publisher.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/rate_limit.py" --fail-under=95
+            pixi run coverage report --include="src/hermes/server.py" --fail-under=90
+            '
+
   macos-tests:
     name: macos-tests
     runs-on: macos-latest  # arm64 only; osx-64 (macos-13) is declared in pixi.lock but not exercised in CI
@@ -438,21 +456,22 @@ jobs:
         run: |
           if [ -f .gitleaks.toml ]; then
             podman run --rm --userns=keep-id:uid=1000,gid=1000 \
-              -v "$PWD:/workspace:Z" -w /workspace hermes:local \
+              -v "$PWD:/workspace:Z" -w /workspace hermes-ci:local \
               gitleaks detect --source /workspace --config .gitleaks.toml \
-                --report-format sarif --report-path gitleaks.sarif --redact
+                --report-format sarif --report-path gitleaks.sarif --redact --exit-code 1
           else
             podman run --rm --userns=keep-id:uid=1000,gid=1000 \
-              -v "$PWD:/workspace:Z" -w /workspace hermes:local \
+              -v "$PWD:/workspace:Z" -w /workspace hermes-ci:local \
               gitleaks detect --source /workspace \
-                --report-format sarif --report-path gitleaks.sarif --redact
+                --report-format sarif --report-path gitleaks.sarif --redact --exit-code 1
           fi
 
       - name: Upload Gitleaks SARIF
         if: always() && hashFiles('gitleaks.sarif') != ''
-        uses: github/codeql-action/upload-sarif@b1e036aad851c47cdff5be6a3ec1b0a29c4b0db1  # v3
+        uses: github/codeql-action/upload-sarif@4e828ff8d448a8a6e532957b1811f387a63867e8  # v3.26.13
         with:
           sarif_file: gitleaks.sarif
+          name: gitleaks-report
 
   build:
     name: build

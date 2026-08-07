@@ -156,8 +156,19 @@ run_unit-tests() {
 }
 
 run_integration-tests() {
-    # Integration tests
-    run_in_container "pixi install --locked --quiet && pixi run pytest -m integration -q"
+    # Integration tests (start live NATS broker inside the container)
+    run_in_container bash -c '
+        set -euo pipefail
+        pixi install --locked --quiet
+        nats-server --jetstream -m 8222 > /tmp/nats-server.log 2>&1 &
+        NATS_PID=$!
+        trap "kill $NATS_PID 2>/dev/null || true" EXIT
+        for i in $(seq 1 30); do
+            curl -sf http://localhost:8222/healthz > /dev/null 2>&1 && break
+            sleep 1
+        done
+        TEST_NATS_URL=nats://localhost:4222 pixi run pytest -m integration -q
+    '
 }
 
 run_schema-validation() {
