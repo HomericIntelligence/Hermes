@@ -3,6 +3,7 @@ name: Required Checks
 on:
   push:
     branches: [main]
+
   pull_request:
     branches: [main]
   workflow_dispatch: {}
@@ -20,36 +21,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
   lint:
     name: lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11  # v0.9.6
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          pixi-version: v0.68.0
-          cache: true
-
-      - name: Cache pre-commit environments
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
           restore-keys: |
-            pre-commit-${{ runner.os }}-
+            podman-hermes-${{ runner.os }}-
 
-      - name: Run pre-commit
-        run: pixi run pre-commit run --all-files --show-diff-on-failure
-
-      - name: Lint
-        run: pixi run lint
-
-      - name: Type check
-        run: pixi run typecheck
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-lint`.
+      - name: lint (in container)
+        run: bash scripts/run_ci_local.sh lint
 
   forbid-suppressions:
     name: forbid-suppressions
@@ -105,17 +100,26 @@ jobs:
   markdownlint:
     name: markdownlint
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    needs: lint
-    permissions:
-      contents: read
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-      - name: Run markdownlint-cli2
-        uses: DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265  # v20.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          globs: "**/*.md"
-          config: ".markdownlint.yaml"
+          fetch-depth: 1
+
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
+
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-markdownlint`.
+      - name: markdownlint (in container)
+        run: bash scripts/run_ci_local.sh markdownlint
 
   pixi-check-matrix:
     name: pixi-check-matrix (${{ matrix.os }})
@@ -167,57 +171,78 @@ jobs:
   # leg names (pixi-check-matrix (macos-14), pixi-check-matrix (macos-15-intel))
   # as additional required checks at their pace; this aggregator works in
   # the meantime so no protection window opens at merge time.
+
   pixi-check:
     name: pixi-check
     runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    needs: pixi-check-matrix
-    permissions:
-      contents: read
+    timeout-minutes: 30
     steps:
-      - name: Aggregate pixi-check-matrix result
-        run: echo "All pixi-check-matrix legs succeeded."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
+
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-pixi-check`.
+      - name: pixi-check (in container)
+        run: bash scripts/run_ci_local.sh pixi-check
 
   justfile-check:
     name: justfile-check
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    needs: lint
-    permissions:
-      contents: read
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-      - name: Skip if no justfile
-        id: detect
-        run: |
-          if [ ! -f justfile ] && [ ! -f Justfile ]; then
-            echo "::notice::No justfile in repo, skipping justfile-check"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Install just
-        if: steps.detect.outputs.skip == 'false'
-        uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6  # v2.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          just-version: "1.36.0"
-      - name: Validate justfile
-        if: steps.detect.outputs.skip == 'false'
-        run: |
-          just --evaluate >/dev/null
-          just --list >/dev/null
+          fetch-depth: 1
+
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
+
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-justfile-check`.
+      - name: justfile-check (in container)
+        run: bash scripts/run_ci_local.sh justfile-check
 
   symlink-check:
     name: symlink-check
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
-    needs: lint
-    permissions:
-      contents: read
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-      - name: Run symlink check
-        run: bash scripts/check-symlinks.sh
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
+
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-symlink-check`.
+      - name: symlink-check (in container)
+        run: bash scripts/run_ci_local.sh symlink-check
 
   no-latest-tags:
     # Regression guard for #316: a bare `nats:latest` slipped into
@@ -254,55 +279,44 @@ jobs:
   unit-tests:
     name: unit-tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11  # v0.9.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          pixi-version: v0.68.0
-          cache: true
+          fetch-depth: 1
 
-      - name: Unit tests (no NATS required)
-        run: pixi run pytest -m "not integration"
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
+
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-unit-tests`.
+      - name: unit-tests (in container)
+        run: bash scripts/run_ci_local.sh unit-tests
 
       - name: Per-module coverage minimums
         run: |
-          pixi run coverage report --include="src/hermes/__init__.py" --fail-under=70
-          pixi run coverage report --include="src/hermes/__main__.py" --fail-under=95
-          pixi run coverage report --include="src/hermes/config.py" --fail-under=90
-          pixi run coverage report --include="src/hermes/logging_config.py" --fail-under=90
-          pixi run coverage report --include="src/hermes/metrics.py" --fail-under=95
-          pixi run coverage report --include="src/hermes/middleware.py" --fail-under=80
-          pixi run coverage report --include="src/hermes/models.py" --fail-under=90
-          pixi run coverage report --include="src/hermes/publisher.py" --fail-under=90
-          pixi run coverage report --include="src/hermes/rate_limit.py" --fail-under=95
-          pixi run coverage report --include="src/hermes/server.py" --fail-under=90
-
-      - name: Advisory — coverage floor ratchet
-        if: always()
-        run: pixi run python scripts/check_coverage_floors.py
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: coverage-html
-          path: |
-            htmlcov/
-            coverage.xml
-
-      - name: Upload coverage to Codecov
-        if: always() && env.CODECOV_TOKEN != ''
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5.5.4
-        with:
-          files: ./coverage.xml
-          flags: unittests
-          name: hermes-unit
-          fail_ci_if_error: false
-          verbose: true
+          podman run --rm --userns=keep-id:uid=1000,gid=1000 \
+            -v "$PWD:/workspace:Z" -w /workspace hermes-ci:local \
+            bash -lc '
+            pixi install --locked --quiet
+            pixi run coverage report --include="src/hermes/__init__.py" --fail-under=70
+            pixi run coverage report --include="src/hermes/__main__.py" --fail-under=95
+            pixi run coverage report --include="src/hermes/config.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/logging_config.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/metrics.py" --fail-under=95
+            pixi run coverage report --include="src/hermes/middleware.py" --fail-under=80
+            pixi run coverage report --include="src/hermes/models.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/publisher.py" --fail-under=90
+            pixi run coverage report --include="src/hermes/rate_limit.py" --fail-under=95
+            pixi run coverage report --include="src/hermes/server.py" --fail-under=90
+            '
 
   macos-tests:
     name: macos-tests
@@ -325,24 +339,26 @@ jobs:
   integration-tests:
     name: integration-tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11  # v0.9.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          pixi-version: v0.68.0
-          cache: true
+          fetch-depth: 1
 
-      - name: Start NATS with JetStream
-        run: |
-          docker run -d --name nats-js -p 4222:4222 -p 8222:8222 nats:2.10@sha256:5498ba57b9471840be3d15b033a4eec554d1c02fa6c2cc0ca2d888637f6c6e2f -js -m 8222
-          until curl -sf http://localhost:8222/healthz; do sleep 1; done
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
 
-      - name: Integration tests
-        env:
-          TEST_NATS_URL: nats://localhost:4222
-        run: pixi run pytest -m integration -v
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-integration-tests`.
+      - name: integration-tests (in container)
+        run: bash scripts/run_ci_local.sh integration-tests
 
   test:
     # Canonical aggregate test check. Succeeds iff both the unit and integration
@@ -396,60 +412,66 @@ jobs:
   security-dependency-scan:
     name: security/dependency-scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11  # v0.9.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          pixi-version: v0.68.0
-          cache: true
+          fetch-depth: 1
 
-      - name: Dependency scan (pip-audit)
-        run: |
-          pixi run pip-audit >> $GITHUB_STEP_SUMMARY
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
+
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-security-dependency-scan`.
+      - name: security-dependency-scan (in container)
+        run: bash scripts/run_ci_local.sh security-dependency-scan
 
   security-secrets-scan:
     name: security/secrets-scan
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout (full history)
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: Install Gitleaks
-        run: |
-          # GITLEAKS_VERSION comes from the workflow-level env (single source of truth).
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')
-          curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${OS}_${ARCH}.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
-          gitleaks version
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
 
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
       - name: Run Gitleaks
         run: |
           if [ -f .gitleaks.toml ]; then
-            gitleaks detect --source . --config .gitleaks.toml \
-              --report-format sarif --report-path gitleaks.sarif --exit-code 1
+            podman run --rm --userns=keep-id:uid=1000,gid=1000 \
+              -v "$PWD:/workspace:Z" -w /workspace hermes-ci:local \
+              gitleaks detect --source /workspace --config .gitleaks.toml \
+                --report-format sarif --report-path gitleaks.sarif --redact --exit-code 1
           else
-            gitleaks detect --source . \
-              --report-format sarif --report-path gitleaks.sarif --exit-code 1
+            podman run --rm --userns=keep-id:uid=1000,gid=1000 \
+              -v "$PWD:/workspace:Z" -w /workspace hermes-ci:local \
+              gitleaks detect --source /workspace \
+                --report-format sarif --report-path gitleaks.sarif --redact --exit-code 1
           fi
 
       - name: Upload Gitleaks SARIF
-        # `if: always()` is intentional: even when "Run Gitleaks" exits non-zero (secret found),
-        # we still want the SARIF report uploaded so reviewers can investigate the finding.
-        # Do NOT make the Run Gitleaks step itself non-fatal — that would let leaked secrets
-        # silently merge to main. The forbid-suppressions guard would also reject any such opt-out.
         if: always() && hashFiles('gitleaks.sarif') != ''
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: github/codeql-action/upload-sarif@4e828ff8d448a8a6e532957b1811f387a63867e8  # v3.26.13
         with:
+          sarif_file: gitleaks.sarif
           name: gitleaks-report
-          path: gitleaks.sarif
-          retention-days: 90
 
   build:
     name: build
@@ -590,18 +612,26 @@ jobs:
   schema-validation:
     name: schema-validation
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 1
 
-      - name: Install check-jsonschema
-        run: pip install check-jsonschema
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
 
-      - name: Validate workflow YAML schemas
-        run: |
-          find .github/workflows -name "*.yml" | \
-            xargs check-jsonschema \
-              --schemafile https://json.schemastore.org/github-workflow
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-schema-validation`.
+      - name: schema-validation (in container)
+        run: bash scripts/run_ci_local.sh schema-validation
 
   openapi-lint:
     # Spectral lint for openapi.json (issue #434). Mirrors the
@@ -624,62 +654,26 @@ jobs:
   deps-version-sync:
     name: deps/version-sync
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          python-version: "3.13"
+          fetch-depth: 1
 
-      - name: Check package version (pyproject.toml vs pixi.toml)
-        run: |
-          set -euo pipefail
-          PYPROJECT_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          PIXI_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pixi.toml','rb'))['workspace']['version'])")
-
-          if [ "$PYPROJECT_VERSION" != "$PIXI_VERSION" ]; then
-            echo "Version mismatch: pyproject.toml ($PYPROJECT_VERSION) != pixi.toml ($PIXI_VERSION)"
-            exit 1
-          fi
-          echo "Package version check passed: $PYPROJECT_VERSION"
-
-      - name: Check dependency ranges (pyproject.toml vs pixi.toml)
-        # Asserts every entry in pixi.toml [pypi-dependencies] has a matching
-        # version range in pyproject.toml [project.dependencies]. See #594.
-        run: python3 scripts/check_dep_sync.py
-
-      - name: Check pixi.lock is not modified (uncommitted)
-        run: |
-          if git diff --name-only HEAD | grep -q pixi.lock; then
-            echo "WARN: pixi.lock has uncommitted modifications"
-            exit 1
-          else
-            echo "OK: pixi.lock is clean"
-          fi
-
-      - name: Setup pixi
-        uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11  # v0.9.6
+      - name: Cache podman container storage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          pixi-version: v0.68.0
-          cache: true
+          path: ~/.local/share/containers/storage
+          key: podman-hermes-${{ runner.os }}-${{ hashFiles('pixi.toml', 'pixi.lock') }}
+          restore-keys: |
+            podman-hermes-${{ runner.os }}-
 
-      - name: Check requirements.lock.txt is up to date
-        # Regenerates the Docker lock from pyproject.toml and fails if it
-        # differs from the committed file. The lock must be refreshed in any PR
-        # that changes [project.dependencies]. Run `just lock` locally. See #354.
-        run: |
-          set -euo pipefail
-          pixi run -e lock pip-compile --generate-hashes --resolver=backtracking \
-              --output-file=requirements.lock.txt pyproject.toml
-          if ! git diff --exit-code -- requirements.lock.txt; then
-            echo "FAIL: requirements.lock.txt is stale."
-            echo "      Run: just lock"
-            echo "      then commit the regenerated requirements.lock.txt."
-            exit 1
-          fi
-          echo "OK: requirements.lock.txt is in sync with pyproject.toml."
+      - name: Build CI image (podman)
+        run: podman build --ignorefile ci/.dockerignore -f ci/Containerfile -t hermes-ci:local .
+      # All checks run inside the CI container — the same image developers
+      # use via `just ci-deps-version-sync`.
+      - name: deps-version-sync (in container)
+        run: bash scripts/run_ci_local.sh deps-version-sync
 
   openapi-drift:
     name: openapi-drift
