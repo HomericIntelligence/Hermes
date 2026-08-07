@@ -136,8 +136,11 @@ run_uv() {
 # ============================================================================
 
 run_lint() {
-    # Lint (pre-commit + lint + typecheck)
-    run_in_container "pixi install --locked --quiet && pixi run pre-commit run --all-files --show-diff-on-failure && pixi run lint && pixi run typecheck"
+    # Lint (pre-commit + lint + typecheck). The spectral-openapi hook runs
+    # via `docker run` and has no daemon inside the CI container; the required
+    # native `openapi-lint` job enforces it with spectral-action, so it is
+    # skipped here (SKIP is pre-commit's documented opt-out mechanism).
+    run_in_container "pixi install --locked --quiet && SKIP=spectral-openapi pixi run pre-commit run --all-files --show-diff-on-failure && pixi run lint && pixi run typecheck"
 }
 
 run_markdownlint() {
