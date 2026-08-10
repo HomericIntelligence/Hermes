@@ -6,7 +6,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
 
 [dependencies]
-python = ">=3.10"
+python = ">=3.13,<3.14"
 just = ">=1.13"
 
 [pypi-dependencies]
@@ -49,10 +49,10 @@ pre-commit = ">=3.0,<5"
 pyyaml = ">=6.0,<7"
 
 [feature.lock.dependencies]
-# Python 3.12 to match the Dockerfile base image (python:3.12-slim).
+# Python 3.13 to match the Dockerfile base image (python:3.13-slim).
 # Refreshing the lock against any other interpreter will produce wheels that
 # the Docker builder cannot install. See issue #354.
-python = ">=3.12,<3.13"
+python = ">=3.13,<3.14"
 
 [feature.lock.pypi-dependencies]
 # Pin pip-tools to a single minor so the regenerated lock file is byte-stable
