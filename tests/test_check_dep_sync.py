@@ -307,3 +307,107 @@ def test_main_real_repo_files_pass(cds: ModuleType) -> None:
     regression in the CI guardrail)."""
     # cds.PYPROJECT and cds.PIXI default to the real repo files.
     assert cds.main() == 0
+
+
+# ---- --fix mode (Dependabot pixi-sync producer, #497) ----------------------
+
+
+def test_fix_rewrites_drifted_string_entry(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi=('# comment to preserve\n[pypi-dependencies]\nfastapi = ">=0.120,<1"\n'),
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main(["--fix"]) == 0
+    out = capsys.readouterr().out
+    assert "FIXED: rewrote 1" in out
+    assert '# comment to preserve' in px.read_text()
+    assert 'fastapi = ">=0.115,<1"' in px.read_text()
+
+
+def test_fix_rewrites_inline_table_version_keeps_extras(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    py, px = _write_pair(
+        tmp_path,
+        pyproject=(
+            '[project]\nname="x"\nversion="0"\ndependencies = ["uvicorn[standard]>=0.46.0,<1"]\n'
+        ),
+        pixi=(
+            '[pypi-dependencies]\nuvicorn = { version = ">=0.51.0,<1", extras = ["standard"] }\n'
+        ),
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main(["--fix"]) == 0
+    rewritten = px.read_text()
+    assert 'uvicorn = { version = ">=0.46.0,<1", extras = ["standard"] }' in rewritten
+    assert "FIXED: rewrote 1" in capsys.readouterr().out
+
+
+def test_fix_noop_when_in_sync(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi='[pypi-dependencies]\nfastapi = ">=0.115,<1"\n',
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main(["--fix"]) == 0
+    assert "no pixi.toml [pypi-dependencies] drift" in capsys.readouterr().out
+
+
+def test_fix_leaves_orphan_entries_untouched(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--fix must not invent or delete dependencies: an entry present only in
+    pixi.toml stays put (the parity gate still reports it as drift)."""
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi=('[pypi-dependencies]\nfastapi = ">=0.120,<1"\nhttpx = ">=0.27,<1"\n'),
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    # Parity still fails: httpx is pixi-only, so --fix alone is insufficient
+    # for this drift class (the dependabot PR path never creates orphans).
+    assert cds.main(["--fix"]) == 1
+    err = capsys.readouterr().err
+    assert "httpx" in err and "missing from pyproject.toml" in err
+    # fastapi WAS rewritten before the parity re-check.
+    assert 'fastapi = ">=0.115,<1"' in px.read_text()
+
+
+def test_fix_skips_self_package_entry(cds: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi=(
+            '[pypi-dependencies]\nhermes = { path = ".", editable = true }\n'
+            'fastapi = ">=0.120,<1"\n'
+        ),
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main(["--fix"]) == 0
+    rewritten = px.read_text()
+    assert 'hermes = { path = ".", editable = true }' in rewritten
+    assert 'fastapi = ">=0.115,<1"' in rewritten

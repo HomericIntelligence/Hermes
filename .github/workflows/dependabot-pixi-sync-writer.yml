@@ -1,0 +1,66 @@
+# .github/workflows/dependabot-pixi-sync-writer.yml
+# Trusted default-branch consumer for the read-only Dependabot pixi-sync
+# generator.
+#
+# SECURITY BOUNDARY: workflow_run gives this workflow a write-scoped token,
+# so it must never check out or execute pull-request code. The artifact is
+# treated only as untrusted data and is validated by the script checked out
+# from the repository default branch (scripts/ci/publish_pixi_sync.py). The
+# commit is created with createCommitOnBranch so it carries a VERIFIED
+# GitHub signature.
+name: Publish regenerated pixi.lock for Dependabot PRs
+
+on:
+  workflow_run:
+    workflows: ["Regenerate pixi.lock on Dependabot PRs"]
+    types: [completed]
+
+concurrency:
+  group: dependabot-pixi-writer-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish-generated-pixi:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.path == '.github/workflows/dependabot-pixi-sync.yml'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted default-branch publisher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download untrusted producer artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: hermes-pixi-sync
+          path: ${{ runner.temp }}/hermes-pixi-sync
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Validate artifact and publish signed commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+        run: >-
+          python scripts/ci/publish_pixi_sync.py
+          --event-path "$GITHUB_EVENT_PATH"
+          --artifact-dir "${{ runner.temp }}/hermes-pixi-sync"
+          --pyproject-path "${{ runner.temp }}/hermes-pixi-sync/pyproject.toml"
+
+# No PR-code checkout is added to this privileged workflow. The publisher
+# validates the workflow_run metadata and the artifact bytes independently,
+# and only then creates a GitHub-signed commit on the PR head branch.

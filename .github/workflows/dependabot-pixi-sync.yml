@@ -1,0 +1,91 @@
+# .github/workflows/dependabot-pixi-sync.yml
+# Regenerate pixi.toml [pypi-dependencies] ranges + pixi.lock for
+# same-repository Dependabot PRs.
+#
+# SECURITY BOUNDARY: pull-request code executes only in this read-only
+# producer. It can publish untrusted bytes as an artifact, but it cannot
+# update a branch or dispatch another workflow. The default-branch-only
+# dependabot-pixi-sync-writer.yml workflow validates those bytes before
+# writing (see scripts/ci/publish_pixi_sync.py).
+name: Regenerate pixi.lock on Dependabot PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-pixi-files:
+    if: >-
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347  # v0.10.1
+        with:
+          pixi-version: v0.68.0
+          cache: false
+
+      - name: Sync pixi.toml ranges from pyproject.toml (comment-preserving)
+        run: python scripts/check_dep_sync.py --fix
+
+      - name: Regenerate pixi.lock deterministically
+        # Plain `pixi lock` preserves unrelated locked versions. `--upgrade`
+        # is intentionally absent so one Dependabot bump cannot refresh the
+        # world. The [feature.lock] env (pip-tools pinned to a single minor)
+        # keeps the lock byte-stable across producers.
+        run: pixi lock
+
+      - name: Verify parity + locked install
+        run: |
+          python scripts/check_dep_sync.py
+          pixi install --locked
+
+      - name: Detect regenerated changes
+        id: detect-regen
+        run: |
+          if git diff --quiet -- pixi.toml pixi.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package untrusted result artifact
+        if: always()
+        shell: bash
+        env:
+          ARTIFACT_ROOT: ${{ runner.temp }}/hermes-pixi-sync
+        run: |
+          mkdir -p "$ARTIFACT_ROOT"
+          cp pixi.toml pixi.lock "$ARTIFACT_ROOT/"
+          # The writer validates pixi.toml against the PR pyproject.toml;
+          # carry it along as the trusted comparison input.
+          cp pyproject.toml "$ARTIFACT_ROOT/pyproject.toml"
+          printf 'changed=%s\n' "${DEPS_CHANGED:-${{ steps.detect-regen.outputs.changed }}}" \
+            > "$ARTIFACT_ROOT/meta.txt"
+
+      - name: Upload pixi-sync result artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        with:
+          name: hermes-pixi-sync
+          path: ${{ runner.temp }}/hermes-pixi-sync
+          if-no-files-found: error
+          retention-days: 1
