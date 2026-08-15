@@ -154,8 +154,10 @@ def validate_artifact(artifact_dir: Path, pyproject_bytes: bytes) -> dict[str, b
         module = importlib.util.module_from_spec(spec)
         sys.modules["check_dep_sync_trusted"] = module
         spec.loader.exec_module(module)
-        module.PYPROJECT = tmp_root / "pyproject.toml"
-        module.PIXI = tmp_root / "pixi.toml"
+        # check_dep_sync.py reads PYPROJECT / PIXI from its module globals;
+        # setattr keeps mypy happy (ModuleType has no such attributes).
+        setattr(module, "PYPROJECT", tmp_root / "pyproject.toml")
+        setattr(module, "PIXI", tmp_root / "pixi.toml")
         rc = module.main()
         if rc != 0:
             raise PublishError("artifact pixi.toml fails the parity gate against PR pyproject.toml")
