@@ -5,38 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 
-class TestMaskSecret:
-    def test_empty_string_returns_not_set(self) -> None:
-        from hermes.server import _mask_secret
-
-        assert _mask_secret("") == "(not set)"
-
-    def test_short_value_fully_masked(self) -> None:
-        from hermes.server import _mask_secret
-
-        assert _mask_secret("abc") == "****"
-
-    def test_exact_show_chars_fully_masked(self) -> None:
-        from hermes.server import _mask_secret
-
-        assert _mask_secret("abcd") == "****"
-
-    def test_longer_value_shows_prefix(self) -> None:
-        from hermes.server import _mask_secret
-
-        assert _mask_secret("abcdefgh") == "abcd****"
-
-    def test_zero_show_chars_fully_masks(self) -> None:
-        from hermes.server import _mask_secret
-
-        assert _mask_secret("supersecret", show_chars=0) == "****"
-
-    def test_custom_show_chars(self) -> None:
-        from hermes.server import _mask_secret
-
-        assert _mask_secret("abcdefgh", show_chars=2) == "ab****"
-
-
 class TestLogStartupBanner:
     def _make_publisher(
         self,
@@ -66,8 +34,8 @@ class TestLogStartupBanner:
         assert __version__ in first_call.args[1:]
 
     def test_banner_logs_nats_url(self) -> None:
-        from hermes.server import _log_startup_banner
         from hermes.config import get_settings
+        from hermes.server import _log_startup_banner
 
         settings = get_settings()
         publisher = self._make_publisher()
@@ -78,8 +46,8 @@ class TestLogStartupBanner:
         assert any(settings.nats_url in a for a in all_info_args)
 
     def test_banner_logs_port(self) -> None:
-        from hermes.server import _log_startup_banner
         from hermes.config import get_settings
+        from hermes.server import _log_startup_banner
 
         settings = get_settings()
         publisher = self._make_publisher()
@@ -89,9 +57,9 @@ class TestLogStartupBanner:
         all_info_args = [str(c) for c in mock_logger.info.call_args_list]
         assert any(str(settings.hermes_port) in a for a in all_info_args)
 
-    def test_banner_masks_webhook_secret(self) -> None:
-        from hermes.server import _log_startup_banner
+    def test_banner_never_logs_webhook_secret(self) -> None:
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         secret = "abcdefgh" + "x" * 24  # pad to 32 chars to pass validation
         settings = Settings(webhook_secret=secret)
@@ -100,12 +68,13 @@ class TestLogStartupBanner:
             _log_startup_banner(publisher, settings)
 
         all_info_args = [str(c) for c in mock_logger.info.call_args_list]
-        assert any("abcd****" in a for a in all_info_args)
         assert not any(secret in a for a in all_info_args)
+        assert not any(secret[:4] in a for a in all_info_args)
+        assert any("hmac_validation" in a and "enabled" in a for a in all_info_args)
 
-    def test_banner_shows_not_set_for_empty_webhook_secret(self) -> None:
-        from hermes.server import _log_startup_banner
+    def test_banner_reports_hmac_disabled_when_secret_unset(self) -> None:
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         settings = Settings(webhook_secret="")
         publisher = self._make_publisher()
@@ -113,11 +82,11 @@ class TestLogStartupBanner:
             _log_startup_banner(publisher, settings)
 
         all_info_args = [str(c) for c in mock_logger.info.call_args_list]
-        assert any("(not set)" in a for a in all_info_args)
+        assert any("hmac_validation" in a and "disabled" in a for a in all_info_args)
 
     def test_banner_shows_hmac_enabled(self) -> None:
-        from hermes.server import _log_startup_banner
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         settings = Settings(webhook_secret="mysecret" + "x" * 24)  # pad to 32 chars
         publisher = self._make_publisher()
@@ -128,8 +97,8 @@ class TestLogStartupBanner:
         assert any("enabled" in a for a in all_info_args)
 
     def test_banner_shows_hmac_disabled(self) -> None:
-        from hermes.server import _log_startup_banner
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         settings = Settings(webhook_secret="")
         publisher = self._make_publisher()
@@ -139,9 +108,9 @@ class TestLogStartupBanner:
         all_info_args = [str(c) for c in mock_logger.info.call_args_list]
         assert any("disabled" in a for a in all_info_args)
 
-    def test_banner_masks_dead_letter_api_key(self) -> None:
-        from hermes.server import _log_startup_banner
+    def test_banner_never_logs_dead_letter_api_key(self) -> None:
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         key = "wxyz1234" + "k" * 24  # >= 32 chars to pass validation
         settings = Settings(dead_letter_api_key=key)
@@ -150,12 +119,13 @@ class TestLogStartupBanner:
             _log_startup_banner(publisher, settings)
 
         all_info_args = [str(c) for c in mock_logger.info.call_args_list]
-        assert any("wxyz****" in a for a in all_info_args)
         assert not any(key in a for a in all_info_args)
+        assert not any(key[:4] in a for a in all_info_args)
+        assert any("dead_letter_auth" in a and "enabled" in a for a in all_info_args)
 
-    def test_banner_shows_not_set_for_empty_dead_letter_api_key(self) -> None:
-        from hermes.server import _log_startup_banner
+    def test_banner_reports_dead_letter_auth_disabled_when_key_unset(self) -> None:
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         settings = Settings(dead_letter_api_key="")
         publisher = self._make_publisher()
@@ -163,11 +133,11 @@ class TestLogStartupBanner:
             _log_startup_banner(publisher, settings)
 
         all_info_args = [str(c) for c in mock_logger.info.call_args_list]
-        assert any("(not set)" in a for a in all_info_args)
+        assert any("dead_letter_auth" in a and "disabled" in a for a in all_info_args)
 
     def test_banner_shows_dead_letter_auth_enabled(self) -> None:
-        from hermes.server import _log_startup_banner
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         settings = Settings(dead_letter_api_key="k" * 32)
         publisher = self._make_publisher()
@@ -178,8 +148,8 @@ class TestLogStartupBanner:
         assert any("dead_letter_auth" in a and "enabled" in a for a in all_info_args)
 
     def test_banner_shows_dead_letter_auth_disabled(self) -> None:
-        from hermes.server import _log_startup_banner
         from hermes.config import Settings
+        from hermes.server import _log_startup_banner
 
         settings = Settings(dead_letter_api_key="")
         publisher = self._make_publisher()

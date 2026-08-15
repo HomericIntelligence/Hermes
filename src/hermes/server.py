@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import hmac
 import logging
@@ -11,7 +12,6 @@ import re
 import signal
 import uuid
 from collections.abc import AsyncGenerator
-import contextlib
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -19,6 +19,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, 
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from hermes import __version__
@@ -38,7 +39,6 @@ from hermes.models import (
 )
 from hermes.publisher import AGENT_EVENTS, TASK_EVENTS, Publisher, UnknownEventTypeError
 from hermes.rate_limit import limiter, rate_limit_exceeded_handler
-from slowapi.middleware import SlowAPIMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ async def _inflight_context() -> AsyncGenerator[None, None]:
         INFLIGHT_REQUESTS.dec()
 
 
-async def _connect_with_retries(publisher: Publisher, settings: "Settings") -> Exception | None:
+async def _connect_with_retries(publisher: Publisher, settings: Settings) -> Exception | None:
     """Attempt NATS connection with retries; return the last exception or None on success."""
     last_exc: Exception | None = None
     for attempt in range(1, settings.nats_retry_attempts + 1):
@@ -744,15 +744,6 @@ async def list_events() -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 
-def _mask_secret(value: str, show_chars: int = 4) -> str:
-    """Mask a secret value, showing only the first ``show_chars`` characters."""
-    if not value:
-        return "(not set)"
-    if len(value) <= show_chars:
-        return "****"
-    return value[:show_chars] + "****"
-
-
 def _log_startup_banner(publisher: Publisher, settings: Settings | None = None) -> None:
     """Log version, active configuration, and NATS connectivity on startup."""
     if settings is None:
@@ -763,11 +754,6 @@ def _log_startup_banner(publisher: Publisher, settings: Settings | None = None) 
         settings.nats_url,
         settings.hermes_port,
         settings.hermes_public_url,
-    )
-    logger.info(
-        "secrets webhook_secret=%s dead_letter_api_key=%s",
-        _mask_secret(settings.webhook_secret),
-        _mask_secret(settings.dead_letter_api_key),
     )
     logger.info(
         "hmac_validation=%s",
