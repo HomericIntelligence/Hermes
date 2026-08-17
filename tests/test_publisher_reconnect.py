@@ -356,7 +356,7 @@ class TestReconnectLoopHealthState:
             return
 
         pub._reconnect_task = asyncio.ensure_future(_noop())
-        await pub._reconnect_task
+        assert await pub._reconnect_task is None
         assert pub._reconnect_task.done()
         assert pub.reconnect_loop_active is False
 

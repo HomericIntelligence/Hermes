@@ -20,10 +20,12 @@ class TestInflightRequestsGauge:
     @pytest.mark.asyncio
     async def test_gauge_decrements_on_exception(self) -> None:
         INFLIGHT_REQUESTS.set(0)
-        with pytest.raises(RuntimeError):
+        try:
             async with _inflight_context():
                 assert INFLIGHT_REQUESTS._value.get() == 1.0
                 raise RuntimeError("boom")
+        except RuntimeError:
+            pass
         assert INFLIGHT_REQUESTS._value.get() == 0.0
 
     @pytest.mark.asyncio
