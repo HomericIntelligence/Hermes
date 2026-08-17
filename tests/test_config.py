@@ -256,10 +256,9 @@ class TestWebhookSecretProductionWarning:
     def test_no_warning_when_secret_set_and_host_0000(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="a" * 32,
                 hermes_host="0.0.0.0",
@@ -271,10 +270,9 @@ class TestWebhookSecretProductionWarning:
     def test_no_warning_when_secret_empty_and_host_localhost(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="127.0.0.1",
@@ -286,10 +284,9 @@ class TestWebhookSecretProductionWarning:
     def test_loud_warning_when_secret_empty_and_host_0000(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="0.0.0.0",
@@ -307,10 +304,9 @@ class TestWebhookSecretProductionWarning:
     def test_loud_warning_when_secret_empty_and_host_fqdn(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="hermes.example.com",
@@ -322,10 +318,9 @@ class TestWebhookSecretProductionWarning:
     def test_loud_warning_when_secret_empty_and_host_public_ip(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="203.0.113.10",
@@ -337,10 +332,9 @@ class TestWebhookSecretProductionWarning:
     def test_loud_warning_when_secret_empty_and_public_url_set(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="127.0.0.1",
@@ -353,10 +347,9 @@ class TestWebhookSecretProductionWarning:
     def test_no_warning_when_public_url_is_localhost_default(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="127.0.0.1",
@@ -369,10 +362,9 @@ class TestWebhookSecretProductionWarning:
     def test_no_warning_when_host_localhost_literal(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="localhost",
@@ -384,10 +376,9 @@ class TestWebhookSecretProductionWarning:
     def test_no_warning_when_secret_set_and_host_fqdn(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="a" * 32,
                 hermes_host="hermes.example.com",
@@ -399,10 +390,9 @@ class TestWebhookSecretProductionWarning:
     def test_no_warning_when_host_ipv6_loopback(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 webhook_secret="",
                 hermes_host="::1",
@@ -418,10 +408,9 @@ class TestDeadLetterKeyProductionWarning:
     def test_no_warning_when_key_set_and_host_0000(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 dead_letter_api_key="a" * 32,
                 hermes_host="0.0.0.0",
@@ -435,10 +424,9 @@ class TestDeadLetterKeyProductionWarning:
         """Regression guard for #519: no warning when bound to loopback (test/dev default)."""
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 dead_letter_api_key="",
                 hermes_host="127.0.0.1",
@@ -450,10 +438,9 @@ class TestDeadLetterKeyProductionWarning:
     def test_loud_warning_when_key_empty_and_host_0000(self) -> None:
         from unittest.mock import patch
 
-        import hermes.config as cfg
-        Settings = cfg.Settings
+        from hermes.config import Settings, _config_logger
 
-        with patch.object(cfg._config_logger, "warning") as mock_warn:
+        with patch.object(_config_logger, "warning") as mock_warn:
             Settings(
                 dead_letter_api_key="",
                 hermes_host="0.0.0.0",

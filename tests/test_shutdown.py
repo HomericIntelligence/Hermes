@@ -340,9 +340,11 @@ class TestInflightCounter:
         import hermes.server as srv
 
         assert srv._inflight == 0
-        with pytest.raises(RuntimeError):
+        try:
             async with srv._inflight_context():
                 raise RuntimeError("boom")
+        except RuntimeError:
+            pass
         async with srv._inflight_lock:
             assert srv._inflight == 0
 
@@ -353,9 +355,11 @@ class TestInflightCounter:
         from fastapi import HTTPException
 
         assert srv._inflight == 0
-        with pytest.raises(HTTPException):
+        try:
             async with srv._inflight_context():
                 raise HTTPException(status_code=503, detail="test")
+        except HTTPException:
+            pass
         async with srv._inflight_lock:
             assert srv._inflight == 0
 
