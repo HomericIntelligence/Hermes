@@ -66,7 +66,7 @@ async def test_connect_passes_configured_jitter_and_cap_to_reconnect_loop(
     ):
         await pub.connect("nats://x", connect_timeout=0.01)
         if pub._reconnect_task is not None:
-            await pub._reconnect_task
+            await asyncio.gather(pub._reconnect_task)
 
     cfg_mod.get_settings.cache_clear()
 

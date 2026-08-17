@@ -75,7 +75,8 @@ async def env(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[MagicMock]:
     """
     from hermes.config import get_settings
     from hermes.rate_limit import limiter
-    from hermes.server import app
+    import hermes.server as srv
+    app = srv.app
 
     monkeypatch.setenv("WEBHOOK_SECRET", TEST_SECRET)
     monkeypatch.setenv("WEBHOOK_RATE_LIMIT", "10000/minute")
@@ -107,7 +108,8 @@ async def _wait_for_inflight(expected: int, timeout: float = 5.0) -> int:
 
 
 def _client() -> AsyncClient:
-    from hermes.server import app
+    import hermes.server as srv
+    app = srv.app
 
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 

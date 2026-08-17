@@ -13,7 +13,6 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-import hermes.server as _server
 from hermes.config import get_settings
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher
@@ -22,7 +21,8 @@ from tests.helpers import FIXED_TS as _FIXED_TS, TEST_SECRET as _TEST_SECRET
 
 @pytest.fixture(autouse=True)
 def reset_server_state() -> Generator[None, None, None]:
-    from hermes.server import app
+    import hermes.server as _server
+    app = _server.app
 
     _server._shutdown_event = asyncio.Event()
     _server._inflight = 0
@@ -59,7 +59,8 @@ def reset_settings() -> Generator[None, None, None]:
     ``app.dependency_overrides[get_settings] = ...`` or by setting env vars and
     constructing a fresh ``Settings()``.
     """
-    from hermes.server import app
+    import hermes.server as _server
+    app = _server.app
 
     get_settings.cache_clear()
     app.dependency_overrides.clear()
@@ -120,7 +121,8 @@ def make_test_client() -> Callable[..., TestClient]:
     """
     from hermes.config import Settings
     from hermes.rate_limit import limiter
-    from hermes.server import app
+    import hermes.server as _server
+    app = _server.app
 
     def _factory(
         *,

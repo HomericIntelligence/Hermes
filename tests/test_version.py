@@ -47,7 +47,8 @@ def test_hermes_version_falls_back_to_unknown_when_not_installed() -> None:
 def test_server_app_version_matches_hermes_version() -> None:
     """FastAPI app version must match hermes.__version__, not a hardcoded literal."""
     import hermes
-    from hermes.server import app
+    import hermes.server as _server
+    app = _server.app
 
     assert app.version == hermes.__version__
 

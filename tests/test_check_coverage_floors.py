@@ -72,8 +72,9 @@ def _write_coverage_xml(path: Path, classes: list[tuple[str, float]]) -> None:
     """
     xml_lines = [
         '<?xml version="1.0" ?>',
-        '<coverage version="5.5" timestamp="1234567890" lines-valid="100" lines-covered="85" '
-        'line-rate="0.85" branches-covered="0" branches-valid="0" branch-rate="0" complexity="0">',
+        ('<coverage version="5.5" timestamp="1234567890" lines-valid="100" '
+         'lines-covered="85" line-rate="0.85" branches-covered="0" '
+         'branches-valid="0" branch-rate="0" complexity="0">'),
     ]
     for filename, line_rate in classes:
         xml_lines.append(

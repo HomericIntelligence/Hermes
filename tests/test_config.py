@@ -257,7 +257,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -272,7 +272,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -287,7 +287,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -308,7 +308,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -323,7 +323,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -338,7 +338,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -354,7 +354,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -370,7 +370,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -385,7 +385,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -400,7 +400,7 @@ class TestWebhookSecretProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -419,7 +419,7 @@ class TestDeadLetterKeyProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -436,7 +436,7 @@ class TestDeadLetterKeyProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(
@@ -451,7 +451,7 @@ class TestDeadLetterKeyProductionWarning:
         from unittest.mock import patch
 
         import hermes.config as cfg
-        from hermes.config import Settings
+        Settings = cfg.Settings
 
         with patch.object(cfg._config_logger, "warning") as mock_warn:
             Settings(

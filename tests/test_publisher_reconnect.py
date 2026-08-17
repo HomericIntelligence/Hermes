@@ -131,7 +131,7 @@ class TestReconnectLoopRetriesOnLostConnection:
             # Block until the reconnect fires (self-terminates) or 5 s safety timeout
             await asyncio.wait_for(reconnect_attempted.wait(), timeout=5.0)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         assert len(connect_calls) > first_call_count  # reconnect was attempted
 
@@ -166,7 +166,7 @@ class TestReconnectLoopRetriesOnLostConnection:
             # Block until the reconnect fires (self-terminates) or 5 s safety timeout
             await asyncio.wait_for(reconnected.wait(), timeout=5.0)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         assert pub.reconnect_count == initial_count + 1
 
@@ -208,7 +208,7 @@ class TestReconnectLoopRetriesOnLostConnection:
             # external reconnect loop succeeding (the double-fire scenario).
             await captured_callbacks["reconnected_cb"]()  # type: ignore[operator]
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         # Exactly one increment despite both the loop AND the callback firing.
         assert pub.reconnect_count == initial_count + 1
@@ -238,7 +238,7 @@ class TestReconnectLoopRetriesOnLostConnection:
             )
             await asyncio.sleep(0.12)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         assert pub.last_error != ""
 
@@ -264,7 +264,7 @@ class TestReconnectLoopRetriesOnLostConnection:
             )
             await asyncio.sleep(0.12)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         after = NATS_RECONNECTS.labels(result="success")._value.get()
         assert after > before
@@ -296,7 +296,7 @@ class TestReconnectLoopRetriesOnLostConnection:
             )
             await asyncio.sleep(0.12)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         after = NATS_RECONNECTS.labels(result="failed")._value.get()
         assert after > before
@@ -385,7 +385,7 @@ class TestReconnectLoopHealthState:
             )
             await asyncio.sleep(0.20)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         assert pub.consecutive_reconnect_failures >= 1
         assert isinstance(pub.last_reconnect_attempt_at, datetime)
@@ -417,7 +417,7 @@ class TestReconnectLoopHealthState:
             )
             await asyncio.wait_for(reconnected.wait(), timeout=5.0)
             pub._stop_event.set()
-            await loop_task
+            await asyncio.gather(loop_task)
 
         assert pub.consecutive_reconnect_failures == 0
 

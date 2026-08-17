@@ -36,7 +36,8 @@ class TestMainEntryPoint:
         assert hasattr(main_mod, "_parse_args")
 
     def test_parse_args_defaults(self) -> None:
-        from hermes.__main__ import _parse_args
+        import hermes.__main__ as main_mod
+        _parse_args = main_mod._parse_args
         from hermes.config import get_settings
 
         args = _parse_args(get_settings(), [])
@@ -45,7 +46,8 @@ class TestMainEntryPoint:
         assert args.reload is False
 
     def test_parse_args_custom(self) -> None:
-        from hermes.__main__ import _parse_args
+        import hermes.__main__ as main_mod
+        _parse_args = main_mod._parse_args
         from hermes.config import get_settings
 
         args = _parse_args(
@@ -59,7 +61,8 @@ class TestMainEntryPoint:
 
     @pytest.mark.parametrize("level", ["debug", "info", "warning", "error", "critical"])
     def test_parse_args_log_levels(self, level: str) -> None:
-        from hermes.__main__ import _parse_args
+        import hermes.__main__ as main_mod
+        _parse_args = main_mod._parse_args
         from hermes.config import get_settings
 
         args = _parse_args(get_settings(), ["--log-level", level])

@@ -117,6 +117,8 @@ class Publisher:
             try:
                 await self._reconnect_task
             except (asyncio.CancelledError, Exception):
+                # Cancelling the reconnect loop raises CancelledError here;
+                # that is the expected shutdown path.
                 pass
             self._reconnect_task = None
 
@@ -294,6 +296,8 @@ class Publisher:
             try:
                 await self._reconnect_task
             except (asyncio.CancelledError, Exception):
+                # Cancelling the reconnect loop raises CancelledError here;
+                # that is the expected shutdown path.
                 pass
             self._reconnect_task = None
         if self._nc is not None:
