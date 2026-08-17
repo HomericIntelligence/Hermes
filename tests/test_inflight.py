@@ -38,7 +38,8 @@ def _make_mock_publisher(*, connected: bool = True) -> MagicMock:
 def _build_client(publisher: MagicMock | None = None) -> TestClient:
     from hermes.config import Settings, get_settings
     from hermes.rate_limit import limiter
-    from hermes.server import app
+    import hermes.server as _server
+    app = _server.app
 
     if publisher is None:
         publisher = _make_mock_publisher()
@@ -290,6 +291,6 @@ class TestDrainLoopWithRealCounter:
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
 
-        await task
+        await asyncio.gather(task)
         assert elapsed < deadline, "Drain loop should have exited before timeout"
         assert srv._inflight == 0

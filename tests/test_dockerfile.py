@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pathlib
 import re
 import tomllib
 from pathlib import Path
@@ -10,7 +9,6 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 DOCKERFILE = ROOT / "Dockerfile"
 PYPROJECT = ROOT / "pyproject.toml"
-_DOCKERFILE = pathlib.Path(__file__).parent.parent / "Dockerfile"
 
 _VERSION_SPEC_RE = re.compile(r"[><=!~]")
 _PIP_INSTALL_RE = re.compile(r"pip install\b")

@@ -159,7 +159,8 @@ class TestWebhookIntegration:
         self, monkeypatch: pytest.MonkeyPatch, nats_url: str, nats_client: nats.aio.client.Client
     ) -> None:
         """POST /webhook with a valid payload results in a NATS message being delivered."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
         monkeypatch.setenv("NATS_URL", nats_url)
@@ -209,7 +210,8 @@ class TestWebhookIntegration:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """POST /webhook returns 503 when the publisher is not connected."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
 
@@ -245,7 +247,8 @@ class TestLifespan:
         self, monkeypatch: pytest.MonkeyPatch, nats_url: str
     ) -> None:
         """The lifespan context manager connects the publisher on startup."""
-        from hermes.server import lifespan
+        import hermes.server as _server
+        lifespan = _server.lifespan
         from fastapi import FastAPI
 
         monkeypatch.setenv("NATS_URL", nats_url)
@@ -260,7 +263,8 @@ class TestLifespan:
         """Lifespan starts in degraded mode when NATS is unreachable after all retry attempts."""
         from unittest.mock import patch
         from hermes.config import Settings
-        from hermes.server import lifespan
+        import hermes.server as _server
+        lifespan = _server.lifespan
         from fastapi import FastAPI
 
         bad_settings = Settings(nats_url="nats://127.0.0.1:19999", nats_retry_attempts=1)
@@ -443,7 +447,8 @@ class TestHealthAndReadyIntegration:
     @pytest.mark.integration
     async def test_health_returns_200_when_nats_connected(self, nats_url: str) -> None:
         """GET /health returns 200 and nats_connected: true when NATS is running."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         pub = Publisher()
         await pub.connect(nats_url)
@@ -463,7 +468,8 @@ class TestHealthAndReadyIntegration:
     @pytest.mark.integration
     async def test_ready_returns_true_when_nats_connected(self, nats_url: str) -> None:
         """GET /ready returns {"ready": true} when Publisher is connected."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         pub = Publisher()
         await pub.connect(nats_url)
@@ -481,7 +487,8 @@ class TestHealthAndReadyIntegration:
     @pytest.mark.integration
     async def test_health_returns_503_when_nats_disconnected(self) -> None:
         """GET /health returns 503 and nats_connected: false when Publisher is not connected."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         disconnected_pub = Publisher()  # never connected
         app.state.publisher = disconnected_pub
@@ -495,7 +502,8 @@ class TestHealthAndReadyIntegration:
     @pytest.mark.integration
     async def test_ready_returns_503_when_nats_disconnected(self) -> None:
         """GET /ready returns 503 and ready: false when Publisher is not connected."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         disconnected_pub = Publisher()  # never connected
         app.state.publisher = disconnected_pub
@@ -738,6 +746,8 @@ class TestReconnectBackoffIntegration:
             try:
                 await asyncio.wait_for(pub._reconnect_task, timeout=2.0)
             except (asyncio.CancelledError, asyncio.TimeoutError):
+                # Reconnect task torn down during the test; both outcomes
+                # are expected here.
                 pass
             pub._reconnect_task = None
 
@@ -864,7 +874,8 @@ class TestLifespanAbort:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """GET /health returns 503 and status='degraded' when publisher is not connected."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         disconnected = Publisher()  # never connected — is_connected is False
         app.state.publisher = disconnected
@@ -881,7 +892,8 @@ class TestLifespanAbort:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """POST /webhook returns 503 when the publisher has never connected (bad NATS URL)."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         monkeypatch.setenv("WEBHOOK_SECRET", "")
         disconnected = Publisher()  # never connected — nats://localhost:9999 equivalent
@@ -939,7 +951,8 @@ class TestBindHost:
         """Lifespan starts successfully when HERMES_HOST is explicitly configured."""
         from fastapi import FastAPI
 
-        from hermes.server import lifespan
+        import hermes.server as _server
+        lifespan = _server.lifespan
 
         monkeypatch.setenv("NATS_URL", nats_url)
         monkeypatch.setenv("HERMES_HOST", "127.0.0.1")
@@ -1029,7 +1042,8 @@ class TestLifespanShutdown:
     ) -> None:
         """After shutdown signal, /webhook → 503 while /health remains available."""
         import hermes.server as _server
-        from hermes.server import app, lifespan
+        app = _server.app
+        lifespan = _server.lifespan
 
         monkeypatch.setenv("NATS_URL", nats_url)
 
@@ -1095,7 +1109,8 @@ class TestRequestIdInNats:
         nats_client: nats.aio.client.Client,
     ) -> None:
         """POST /webhook with X-Request-ID causes request_id to appear in the NATS payload."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         my_request_id = "test-req-id-231"
         monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
@@ -1160,7 +1175,8 @@ class TestStartupBanner:
     ) -> None:
         """lifespan emits version, config, and NATS connectivity banner lines."""
         from unittest.mock import patch
-        from hermes.server import lifespan
+        import hermes.server as _server
+        lifespan = _server.lifespan
         from fastapi import FastAPI
 
         monkeypatch.setenv("NATS_URL", nats_url)
@@ -1201,7 +1217,8 @@ class TestJetStreamAck:
         nats_client: nats.aio.client.Client,
     ) -> None:
         """POST /webhook → HMAC check → Publisher.publish → JetStream ACK succeeds."""
-        from hermes.server import app
+        import hermes.server as _server
+        app = _server.app
 
         monkeypatch.setenv("WEBHOOK_SECRET", INTEGRATION_TEST_SECRET)
         monkeypatch.setenv("NATS_URL", nats_url)

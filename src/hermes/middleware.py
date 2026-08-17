@@ -36,7 +36,7 @@ class PayloadSizeLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
                     )
                     return Response(status_code=413)
             except ValueError:
-                pass
+                logger.warning("Malformed Content-Length header ignored: %r", content_length)
 
         body = await request.body()
         if len(body) > self.max_bytes:

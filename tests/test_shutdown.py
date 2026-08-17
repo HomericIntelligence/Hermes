@@ -35,7 +35,8 @@ def _make_mock_publisher(*, connected: bool = True) -> MagicMock:
 
 
 def _build_client(publisher: MagicMock | None = None) -> TestClient:
-    from hermes.server import app
+    import hermes.server as srv
+    app = srv.app
 
     if publisher is None:
         publisher = _make_mock_publisher()
@@ -152,7 +153,7 @@ class TestShutdownMiddleware:
     def test_webhook_accepted_when_not_shutting_down(self) -> None:
         import hermes.server as srv
         from hermes.config import Settings, get_settings
-        from hermes.server import app
+        app = srv.app
 
         srv._shutdown_event = asyncio.Event()
         # Disable HMAC validation so the test works regardless of .env contents
@@ -225,7 +226,8 @@ class TestLifespanShutdown:
         """Lifespan teardown waits until _inflight reaches 0 before disconnecting."""
         import hermes.server as srv
         from hermes.config import get_settings
-        from hermes.server import app, lifespan
+        app = srv.app
+        lifespan = srv.lifespan
 
         monkeypatch.setenv("SHUTDOWN_TIMEOUT", "2.0")
         get_settings.cache_clear()
@@ -256,7 +258,7 @@ class TestLifespanShutdown:
                 # Exiting the `async with` ran server.lifespan's real finally clause,
                 # which polls _inflight until 0 then awaits publisher.disconnect().
             if clear_task is not None:
-                await clear_task
+                await asyncio.gather(clear_task)
         finally:
             if clear_task is not None and not clear_task.done():
                 clear_task.cancel()
@@ -272,7 +274,8 @@ class TestLifespanShutdown:
         """Lifespan teardown calls disconnect even if _inflight never reaches 0."""
         import hermes.server as srv
         from hermes.config import get_settings
-        from hermes.server import app, lifespan
+        app = srv.app
+        lifespan = srv.lifespan
 
         monkeypatch.setenv("SHUTDOWN_TIMEOUT", "0.3")
         get_settings.cache_clear()
@@ -462,7 +465,8 @@ class TestShutdownRaceCondition:
         decrement back to 0 via the context manager's finally."""
         import hermes.server as srv
         from hermes.config import Settings, get_settings
-        from hermes.server import app
+        import hermes.server as srv
+        app = srv.app
 
         # Disable HMAC validation; Settings is frozen, so override the dependency
         # rather than mutating the model in place.
@@ -492,7 +496,8 @@ class TestShutdownRaceCondition:
         and the new post-increment guard does not regress the happy path."""
         import hermes.server as srv
         from hermes.config import Settings, get_settings
-        from hermes.server import app
+        import hermes.server as srv
+        app = srv.app
 
         # Disable HMAC validation; Settings is frozen, so override the dependency
         # rather than mutating the model in place.
