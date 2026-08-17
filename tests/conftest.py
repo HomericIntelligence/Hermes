@@ -13,7 +13,6 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-import hermes.server as _server
 from hermes.config import get_settings
 from hermes.models import WebhookPayload
 from hermes.publisher import Publisher

@@ -465,7 +465,6 @@ class TestShutdownRaceCondition:
         decrement back to 0 via the context manager's finally."""
         import hermes.server as srv
         from hermes.config import Settings, get_settings
-        import hermes.server as srv
         app = srv.app
 
         # Disable HMAC validation; Settings is frozen, so override the dependency
@@ -496,7 +495,6 @@ class TestShutdownRaceCondition:
         and the new post-increment guard does not regress the happy path."""
         import hermes.server as srv
         from hermes.config import Settings, get_settings
-        import hermes.server as srv
         app = srv.app
 
         # Disable HMAC validation; Settings is frozen, so override the dependency
