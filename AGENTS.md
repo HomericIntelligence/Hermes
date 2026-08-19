@@ -503,4 +503,3 @@ Hermes's role in the mesh follows design principles inherited from
   subjects only, with rate and payload limits enforced at the edge.
 - **Small, focused service (KISS / YAGNI).** Hermes owns ingestion and routing —
   nothing more; consumers, retries, and storage belong to downstream services.
-
