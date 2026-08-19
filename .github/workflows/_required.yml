@@ -678,6 +678,10 @@ jobs:
       - name: deps-version-sync (in container)
         run: bash scripts/run_ci_local.sh deps-version-sync
 
+      - name: dep-check (in container)
+        # Catch pyproject/pixi dependency drift before merge (#556).
+        run: bash scripts/run_ci_local.sh dep-check
+
   openapi-drift:
     name: openapi-drift
     runs-on: ubuntu-24.04
