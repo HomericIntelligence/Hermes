@@ -485,3 +485,21 @@ just lint-openapi # spectral lint openapi.json (mirrors pre-commit & CI; #434)
 
 python -m hermes # alternative to 'just start' — runs the server directly
 ```
+
+## Design Philosophy
+
+Hermes's role in the mesh follows design principles inherited from
+**ProjectOdyssey**:
+
+- **Typed contracts (DRY / boundaries).** Every accepted event type, subject
+  pattern, and payload schema is declared once (OpenAPI + the §1–§3 contract
+  sections) and enforced at the boundary — validation is not scattered across
+  handlers.
+- **Drift prevention (fail loudly).** `pyproject.toml`, `pixi.toml`, and the
+  lockfiles must agree; CI rejects any drift instead of shipping a
+  buildable-but-inconsistent dependency set.
+- **Least privilege, least astonishment (POLA).** Inbound events are HMAC-
+  validated with per-consumer scoping; outbound publishes go to explicit
+  subjects only, with rate and payload limits enforced at the edge.
+- **Small, focused service (KISS / YAGNI).** Hermes owns ingestion and routing —
+  nothing more; consumers, retries, and storage belong to downstream services.
