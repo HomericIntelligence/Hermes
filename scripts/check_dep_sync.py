@@ -272,8 +272,21 @@ def main(argv: list[str] | None = None) -> int:
     pixi_table = pixi_data.get("pypi-dependencies", {})
     pixi_deps = parse_pixi(pixi_table)
 
-    pixi_deps = parse_pixi(pixi_table)
+    if args.fix:
+        changed = _sync_pixi_from_pyproject(py_deps, pixi_deps)
+        if changed:
+            print(
+                f"FIXED: rewrote {changed} pixi.toml [pypi-dependencies] range(s) to match pyproject.toml."
+            )
+        else:
+            print("FIXED: no pixi.toml [pypi-dependencies] drift detected.")
+        # Re-load and re-verify so --fix is self-checking.
+        pixi_data = _load(PIXI)
+        pixi_deps = parse_pixi(pixi_data.get("pypi-dependencies", {}))
 
+    # Pixi upper-bound gate (#683). Runs AFTER the --fix path so an unbounded
+    # pixi spec with a bounded pyproject counterpart is self-healed by --fix
+    # before this gate fails; anything still unbounded post-fix fails here.
     pixi_bound_failures = check_pixi_upper_bounds(pixi_deps)
     if pixi_bound_failures:
         print(
@@ -286,18 +299,6 @@ def main(argv: list[str] | None = None) -> int:
             print(line, file=sys.stderr)
         print('\nFix by adding an upper bound, e.g.:\n  some-package = ">=1.2,<2"', file=sys.stderr)
         return 1
-
-    if args.fix:
-        changed = _sync_pixi_from_pyproject(py_deps, pixi_deps)
-        if changed:
-            print(
-                f"FIXED: rewrote {changed} pixi.toml [pypi-dependencies] range(s) to match pyproject.toml."
-            )
-        else:
-            print("FIXED: no pixi.toml [pypi-dependencies] drift detected.")
-        # Re-load and re-verify so --fix is self-checking.
-        pixi_data = _load(PIXI)
-        pixi_deps = parse_pixi(pixi_data.get("pypi-dependencies", {}))
 
     parity_failures = check_parity(py_deps, pixi_deps)
     if parity_failures:

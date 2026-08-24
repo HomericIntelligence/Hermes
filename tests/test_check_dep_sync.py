@@ -264,6 +264,27 @@ def test_main_fails_when_both_files_unbounded_behind_marker(
     assert "no upper bound (<)" in capsys.readouterr().err
 
 
+def test_fix_self_heals_unbounded_pixi_spec(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """PRRT_kwDORoAqns6bqdkm: --fix must still self-heal an unbounded pixi
+    spec when a bounded pyproject entry exists — the pixi bound gate runs
+    after the fix/re-verify path, so the synced (bounded) range passes."""
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi='[pypi-dependencies]\nfastapi = ">=0.115"\n',
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main(["--fix"]) == 0
+    assert "FIXED: rewrote 1" in capsys.readouterr().out
+    assert 'fastapi = ">=0.115,<1"' in px.read_text()
+
+
 def test_main_fails_on_drift(
     cds: ModuleType,
     tmp_path: Path,
