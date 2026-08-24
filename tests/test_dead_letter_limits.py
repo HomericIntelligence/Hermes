@@ -491,3 +491,15 @@ class TestDeadLetterEvictionWarning:
             await publisher.publish(self._payload(i))
         after = REGISTRY.get_sample_value("hermes_dead_letter_evictions_total") or 0.0
         assert after == before + 1.0
+
+    @pytest.mark.asyncio
+    async def test_counter_flat_below_capacity(self, publisher: "Publisher") -> None:
+        """Issue #697: no eviction counter increment when filling to exactly maxlen."""
+        from prometheus_client import REGISTRY
+
+        before = REGISTRY.get_sample_value("hermes_dead_letter_evictions_total") or 0.0
+        for i in range(2):  # fills to maxlen=2 without evicting
+            await publisher.publish(self._payload(i))
+        after = REGISTRY.get_sample_value("hermes_dead_letter_evictions_total") or 0.0
+        assert after == before
+        assert publisher.dead_letter_count == 2
