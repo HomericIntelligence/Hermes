@@ -1,8 +1,11 @@
 """Regression tests for scripts/check_dep_sync.py (issue #497 follow-up).
 
-The script enforces two invariants in CI:
-  1. Every [project.dependencies] entry has a '<' upper bound.
-  2. Every package appearing in pixi.toml [pypi-dependencies] OR in
+The script enforces three invariants in CI:
+  1. Every [project.dependencies] entry has a '<' upper bound (marker-safe:
+     a '<' inside an environment marker does not satisfy the gate — #683).
+  2. Every pixi.toml [pypi-dependencies] spec also has a '<' upper
+     bound (#683).
+  3. Every package appearing in pixi.toml [pypi-dependencies] OR in
      pyproject.toml [project.dependencies] is present in BOTH files with
      the same version range (bidirectional parity).
 
@@ -103,6 +106,38 @@ def test_missing_upper_bound_flagged(cds: ModuleType) -> None:
     assert failures == ["  'fastapi>=0.115' — missing '<' upper bound"]
 
 
+def test_upper_bound_marker_lt_does_not_mask_missing_bound(cds: ModuleType) -> None:
+    """Issue #683 repro: '<' inside an env marker must not satisfy the gate."""
+    failures = cds.check_upper_bounds(['foo>=1 ; python_version<"4"'])
+    assert failures == ["  'foo>=1 ; python_version<\"4\"' — missing '<' upper bound"]
+
+
+def test_upper_bound_in_spec_with_marker_passes(cds: ModuleType) -> None:
+    assert cds.check_upper_bounds(['httpx>=0.27,<1 ; python_version<"4"']) == []
+
+
+def test_upper_bounds_reject_garbage(cds: ModuleType) -> None:
+    with pytest.raises(SystemExit):
+        cds.check_upper_bounds(["!!!not a dep!!!"])
+
+
+# ---- check_pixi_upper_bounds (NEW, #683) ------------------------------------
+
+
+def test_pixi_upper_bound_present_passes(cds: ModuleType) -> None:
+    assert cds.check_pixi_upper_bounds({"httpx": ">=0.27,<1"}) == []
+
+
+def test_pixi_missing_upper_bound_flagged(cds: ModuleType) -> None:
+    assert cds.check_pixi_upper_bounds({"httpx": ">=0.27"}) == [
+        "  httpx = '>=0.27' — missing '<' upper bound"
+    ]
+
+
+def test_pixi_star_spec_flagged(cds: ModuleType) -> None:
+    assert len(cds.check_pixi_upper_bounds({"httpx": "*"})) == 1
+
+
 # ---- check_parity: pixi -> pyproject (existing direction) ------------------
 
 
@@ -187,6 +222,67 @@ def test_main_passes_on_synced_files(
     monkeypatch.setattr(cds, "PIXI", px)
     assert cds.main() == 0
     assert "OK:" in capsys.readouterr().out
+
+
+def test_main_fails_when_pixi_spec_unbounded(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Unbounded pixi spec fails with the bound message, not just parity."""
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi='[pypi-dependencies]\nfastapi = ">=0.115"\n',
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main() == 1
+    err = capsys.readouterr().err
+    assert "pixi.toml [pypi-dependencies] entries have no upper bound" in err
+
+
+def test_main_fails_when_both_files_unbounded_behind_marker(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """#683: previously passed — marker '<' masked the pyproject gap and
+    pixi was never bound-checked."""
+    py, px = _write_pair(
+        tmp_path,
+        pyproject=(
+            '[project]\nname="x"\nversion="0"\ndependencies = [\'foo>=1 ; python_version<"4"\']\n'
+        ),
+        pixi='[pypi-dependencies]\nfoo = ">=1"\n',
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main() == 1
+    assert "no upper bound (<)" in capsys.readouterr().err
+
+
+def test_fix_self_heals_unbounded_pixi_spec(
+    cds: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """PRRT_kwDORoAqns6bqdkm: --fix must still self-heal an unbounded pixi
+    spec when a bounded pyproject entry exists — the pixi bound gate runs
+    after the fix/re-verify path, so the synced (bounded) range passes."""
+    py, px = _write_pair(
+        tmp_path,
+        pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',
+        pixi='[pypi-dependencies]\nfastapi = ">=0.115"\n',
+    )
+    monkeypatch.setattr(cds, "PYPROJECT", py)
+    monkeypatch.setattr(cds, "PIXI", px)
+    assert cds.main(["--fix"]) == 0
+    assert "FIXED: rewrote 1" in capsys.readouterr().out
+    assert 'fastapi = ">=0.115,<1"' in px.read_text()
 
 
 def test_main_fails_on_drift(
@@ -328,7 +424,7 @@ def test_fix_rewrites_drifted_string_entry(
     assert cds.main(["--fix"]) == 0
     out = capsys.readouterr().out
     assert "FIXED: rewrote 1" in out
-    assert '# comment to preserve' in px.read_text()
+    assert "# comment to preserve" in px.read_text()
     assert 'fastapi = ">=0.115,<1"' in px.read_text()
 
 
@@ -396,7 +492,9 @@ def test_fix_leaves_orphan_entries_untouched(
     assert 'fastapi = ">=0.115,<1"' in px.read_text()
 
 
-def test_fix_skips_self_package_entry(cds: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fix_skips_self_package_entry(
+    cds: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     py, px = _write_pair(
         tmp_path,
         pyproject='[project]\nname="x"\nversion="0"\ndependencies = ["fastapi>=0.115,<1"]\n',

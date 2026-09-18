@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """CI guardrail: verify dependency version ranges are consistent.
 
-Two checks are performed:
+Three checks are performed:
 
 1. Every entry in pyproject.toml ``[project.dependencies]`` has a ``<`` upper
-   bound. Without an upper bound, ``pip install .`` may pull a breaking major
-   release.
+   bound (marker-safe: a ``<`` inside an environment marker does not count).
+   Without an upper bound, ``pip install .`` may pull a breaking major release.
 
-2. Every production dependency must appear in BOTH pyproject.toml
+2. Every pixi.toml ``[pypi-dependencies]`` version spec also has a ``<``
+   upper bound (#683).
+
+3. Every production dependency must appear in BOTH pyproject.toml
    ``[project.dependencies]`` AND pixi.toml ``[pypi-dependencies]`` with the
    same version range (bidirectional parity). This prevents drift where one
    file is updated but not the other (see #497, follow-up from #338).
@@ -60,9 +63,7 @@ _NAME_RE = re.compile(r"^\s*([A-Za-z0-9_.\-]+)(?:\[[^\]]*\])?\s*(.*?)\s*$")
 # Matches a pixi.toml [pypi-dependencies] entry. Two shapes are handled:
 #   name = ">=1.2,<2"
 #   name = {version = ">=1.2,<2", extras = ["standard"]}
-_PIXI_STRING_ENTRY_RE = re.compile(
-    r'^(\s*[A-Za-z0-9_.\-]+\s*=\s*)"([^"]*)"(.*)$'
-)
+_PIXI_STRING_ENTRY_RE = re.compile(r'^(\s*[A-Za-z0-9_.\-]+\s*=\s*)"([^"]*)"(.*)$')
 _PIXI_TABLE_ENTRY_RE = re.compile(
     r'^(\s*[A-Za-z0-9_.\-]+\s*=\s*\{[^}]*version\s*=\s*)"([^"]*)"(.*)$'
 )
@@ -126,7 +127,35 @@ def _load(path: Path) -> dict[str, Any]:
 
 
 def check_upper_bounds(deps: list[str]) -> list[str]:
-    return [f"  {entry!r} — missing '<' upper bound" for entry in deps if "<" not in entry]
+    """Flag entries whose *version spec* lacks a '<' upper bound.
+
+    The environment marker is stripped before testing so a '<' inside a
+    marker (e.g. ``foo>=1 ; python_version<"4"``) cannot mask a missing
+    bound (issue #683).
+    """
+    failures: list[str] = []
+    for entry in deps:
+        head = entry.split(";", 1)[0]
+        m = _NAME_RE.match(head)
+        if not m:
+            raise SystemExit(f"pyproject.toml: cannot parse dependency entry {entry!r}")
+        spec = m.group(2).strip()
+        if "<" not in spec:
+            failures.append(f"  {entry!r} — missing '<' upper bound")
+    return failures
+
+
+def check_pixi_upper_bounds(pixi: dict[str, str]) -> list[str]:
+    """Flag pixi [pypi-dependencies] specs lacking a '<' upper bound (#683).
+
+    Specs here are bare version strings from parse_pixi (no names/markers),
+    so a plain substring test is exact. Catches '*' specs too.
+    """
+    return [
+        f"  {name} = {spec!r} — missing '<' upper bound"
+        for name, spec in sorted(pixi.items())
+        if "<" not in spec
+    ]
 
 
 def check_parity(py: dict[str, str], pixi: dict[str, str]) -> list[str]:
@@ -246,12 +275,30 @@ def main(argv: list[str] | None = None) -> int:
     if args.fix:
         changed = _sync_pixi_from_pyproject(py_deps, pixi_deps)
         if changed:
-            print(f"FIXED: rewrote {changed} pixi.toml [pypi-dependencies] range(s) to match pyproject.toml.")
+            print(
+                f"FIXED: rewrote {changed} pixi.toml [pypi-dependencies] range(s) to match pyproject.toml."
+            )
         else:
             print("FIXED: no pixi.toml [pypi-dependencies] drift detected.")
         # Re-load and re-verify so --fix is self-checking.
         pixi_data = _load(PIXI)
         pixi_deps = parse_pixi(pixi_data.get("pypi-dependencies", {}))
+
+    # Pixi upper-bound gate (#683). Runs AFTER the --fix path so an unbounded
+    # pixi spec with a bounded pyproject counterpart is self-healed by --fix
+    # before this gate fails; anything still unbounded post-fix fails here.
+    pixi_bound_failures = check_pixi_upper_bounds(pixi_deps)
+    if pixi_bound_failures:
+        print(
+            "FAIL: The following pixi.toml [pypi-dependencies] entries have no upper "
+            "bound (<).\n"
+            "      Without an upper bound, pixi may pull breaking major versions.\n",
+            file=sys.stderr,
+        )
+        for line in pixi_bound_failures:
+            print(line, file=sys.stderr)
+        print('\nFix by adding an upper bound, e.g.:\n  some-package = ">=1.2,<2"', file=sys.stderr)
+        return 1
 
     parity_failures = check_parity(py_deps, pixi_deps)
     if parity_failures:
