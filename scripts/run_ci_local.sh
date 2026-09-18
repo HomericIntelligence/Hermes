@@ -192,8 +192,11 @@ run_security-dependency-scan() {
 }
 
 run_deps-version-sync() {
-    # Dependency version sync check
-    run_in_container "pixi install --locked"
+    # Dependency version sync checks:
+    #   - pixi install --locked  -> pixi.toml vs pixi.lock consistency
+    #   - check_dep_sync.py      -> pyproject.toml [project.dependencies] vs
+    #                               pixi.toml [pypi-dependencies] parity (#511)
+    run_in_container "pixi install --locked --quiet && pixi run python scripts/check_dep_sync.py"
 }
 
 run_forbid-suppressions() {
