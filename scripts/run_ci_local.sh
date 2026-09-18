@@ -199,6 +199,11 @@ run_deps-version-sync() {
     run_in_container "pixi install --locked --quiet && pixi run python scripts/check_dep_sync.py"
 }
 
+run_dep-check() {
+    # pyproject/pixi dependency parity + upper-bound guardrail (#556)
+    run_in_container "pixi run python scripts/check_dep_sync.py"
+}
+
 run_forbid-suppressions() {
     # No silent failure suppressions
     run_in_container "! grep -rE '|| true|set +e' scripts/run_ci_local.sh || echo 'forbid-suppressions OK'"
@@ -231,6 +236,7 @@ case "${SUBSET}" in
     security-secrets-scan) run_security-secrets-scan ;;
     security-dependency-scan) run_security-dependency-scan ;;
     deps-version-sync) run_deps-version-sync ;;
+    dep-check) run_dep-check ;;
     forbid-suppressions) run_forbid-suppressions ;;
     justfile-check) run_justfile-check ;;
     symlink-check) run_symlink-check ;;
