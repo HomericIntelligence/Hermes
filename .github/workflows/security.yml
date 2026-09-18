@@ -1,8 +1,16 @@
 name: Security Scan
 
+# `Secret Scanning (gitleaks)` is a required context in the active main
+# rulesets, so this workflow must report it for pull_request AND merge_group.
+# The merge queue evaluates required contexts against the synthetic
+# `gh-readonly-queue/...` SHA; a pull_request-only producer never reports
+# there, so the queue waits out `check_response_timeout_minutes` and ejects
+# the entry, blocking every merge (issue #764, issue #766).
 on:
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
   schedule:
     # Weekly on Monday at 08:00 UTC
     - cron: "0 8 * * 1"
@@ -12,6 +20,12 @@ on:
 # .github/workflows/_required.yml so PR scans and required CI agree.
 env:
   GITLEAKS_VERSION: "8.30.1"
+
+# Event-scoped so a pull-request run and its synthetic merge-group run can
+# never cancel one another (which would strand the queue entry).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   secret-scan:

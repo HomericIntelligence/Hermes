@@ -12,8 +12,9 @@ _REPO = Path(__file__).resolve().parent.parent
 _WORKFLOWS = _REPO / ".github" / "workflows"
 
 # These names mirror the required contexts owned by each real producer in
-# Hermes's active main rulesets. The legacy Secret Scanning (gitleaks) context
-# is emitted by security.yml and is intentionally outside issue #764.
+# Hermes's active main rulesets. Every producer listed here must emit its
+# contexts for pull_request *and* merge_group, or the merge queue waits on a
+# context that can never report and ejects the entry on timeout (issue #764).
 _REQUIRED_CONTEXTS_BY_PRODUCER = {
     "_required.yml": {
         "lint",
@@ -30,7 +31,15 @@ _REQUIRED_CONTEXTS_BY_PRODUCER = {
         "release",
         "justfile-check",
     },
+    # Canonical main-push secret scan lives in _required.yml, so this producer
+    # is PR/schedule/dispatch only and must not be expected on main push.
+    "security.yml": {"Secret Scanning (gitleaks)"},
 }
+
+# Producers that additionally gate main pushes. _required.yml is the canonical
+# producer for main-tip health; security.yml contributes only scheduled and
+# pull-request scans.
+_MAIN_PUSH_PRODUCERS = {"_required.yml"}
 
 _SMOKE_WORKFLOW = "merge-queue-smoke.yml"
 _BOOL_TAG = "tag:yaml.org,2002:bool"
@@ -109,13 +118,21 @@ def _modeled_concurrency_key(
 def test_required_producer_has_pull_request_merge_group_parity(
     workflow_name: str, required_contexts: set[str]
 ) -> None:
-    """Every required producer emits the same contexts for PR and queue SHAs."""
+    """Every required producer emits the same contexts for PR and queue SHAs.
+
+    A missing merge_group trigger is not a cosmetic gap: the merge queue
+    evaluates required contexts against the synthetic ``gh-readonly-queue``
+    SHA, so a producer that only listens to ``pull_request`` never reports
+    there. The queue then holds the entry until
+    ``check_response_timeout_minutes`` expires and ejects it (issue #764).
+    """
     document = _load_workflow(workflow_name)
     trigger = document["on"]
     assert isinstance(trigger, dict)
     assert trigger.get("pull_request") == {"branches": ["main"]}
-    assert trigger.get("push") == {"branches": ["main"]}
     assert trigger.get("merge_group") == {"types": ["checks_requested"]}
+    if workflow_name in _MAIN_PUSH_PRODUCERS:
+        assert trigger.get("push") == {"branches": ["main"]}
 
     jobs_by_context = _job_by_context(document)
     assert required_contexts <= jobs_by_context.keys(), (
