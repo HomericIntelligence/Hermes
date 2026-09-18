@@ -12,7 +12,9 @@ while IFS= read -r -d '' link; do
     /*) abs="$target" ;;
     *)  abs="$(cd "$(dirname -- "$link")" && pwd -P)/$target" ;;
   esac
-  resolved="$(readlink -m -- "$abs")"
+  # `readlink -m` is a GNU extension and is unavailable on macOS.  Python's
+  # realpath has the required non-strict behavior for broken-link detection.
+  resolved="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$abs")"
   case "$resolved" in
     "$ROOT"|"$ROOT"/*) ;;
     *) echo "ERROR: symlink escapes repo: $link -> $target"; fail=1 ;;

@@ -175,8 +175,10 @@ run_integration-tests() {
 }
 
 run_schema-validation() {
-    # Schema validation
-    run_in_container "pixi install --locked --quiet && (pixi run validate 2>/dev/null || true)"
+    # Validate every GitHub Actions workflow against check-jsonschema's bundled
+    # schema.  Pin the validator and use its bundled schema so validation does
+    # not depend on a mutable remote schema URL.
+    run_in_container "set -o pipefail; python -m pip install --disable-pip-version-check --quiet --user check-jsonschema==0.38.0 && export PATH=\"\${HOME}/.local/bin:\${PATH}\" && find .github/workflows -type f \\( -name '*.yml' -o -name '*.yaml' \\) -print0 | xargs -0 check-jsonschema --builtin-schema vendor.github-workflows"
 }
 
 run_security-secrets-scan() {
@@ -206,7 +208,7 @@ run_justfile-check() {
 
 run_symlink-check() {
     # Symlink integrity
-    run_in_container "git ls-files -s | grep '^120000' > /dev/null 2>&1 || echo 'no symlinks'"
+    run_in_container "bash scripts/check-symlinks.sh"
 }
 
 # ============================================================================
